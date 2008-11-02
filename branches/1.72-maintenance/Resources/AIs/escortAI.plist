@@ -1,0 +1,64 @@
+{
+	GLOBAL =
+	{
+		ENTER = ("setStateTo: BEGIN_BUSINESS");
+	};
+	"FLYING_ESCORT" =
+	{
+		ENTER = (performEscort);
+		RESTARTED = ("setStateTo: BEGIN_BUSINESS");
+		"GROUP_ATTACK_TARGET" = (setTargetToFoundTarget, "setAITo: interceptAI.plist");
+		ESCORTING = ("setDesiredRangeTo: 0.0", performEscort);
+		"INCOMING_MISSILE" = ("messageMother: INCOMING_MISSILE");
+		"ATTACKED" = ("messageMother: ATTACKED");
+		"NOT_ESCORTING" = ("setStateTo: LOOK_FOR_BUSINESS");
+		"TARGET_LOST" = ("setStateTo: LOOK_FOR_BUSINESS");
+		"TARGET_DESTROYED" = ("setStateTo: LOOK_FOR_BUSINESS");
+		"ENTER WORMHOLE" = ("setStateTo: ENTER_WORMHOLE");
+		UPDATE = (escortCheckMother, "pauseAI: 15");
+	};
+	"BEGIN_BUSINESS" =
+	{
+		ENTER = (escortCheckMother);
+		"LAUNCHED OKAY" = ("setStateTo: CLEAR_STATION");
+		ATTACKED = (setTargetToPrimaryAggressor, "setAITo: interceptAI.plist");
+		ESCORTING = ("setDesiredRangeTo: 0.0", "setStateTo: FLYING_ESCORT");
+		"NOT_ESCORTING" = ("setStateTo: LOOK_FOR_BUSINESS");
+		UPDATE = (escortCheckMother, "pauseAI: 7.5");
+	};
+	"ENTER_WORMHOLE" =
+	 {
+		ENTER =
+		(
+			setDestinationToTarget,
+			"setDesiredRangeTo: 1.0",
+			"setSpeedFactorTo: 1.0",
+			performFlyToRangeFromDestination
+		);
+		"PLAYER WITCHSPACE" = (enterTargetWormhole);
+	};
+	"CLEAR_STATION" = {
+		ENTER = (
+			getWitchspaceEntryCoordinates, 
+			setDestinationFromCoordinates, 
+			"setDesiredRangeTo: 5000.0", 
+			"setSpeedFactorTo: 0.50", 
+			performFlyToRangeFromDestination
+		);
+		"DESIRED_RANGE_ACHIEVED" = ("setStateTo: LOOK_FOR_BUSINESS");
+		"TARGET_FOUND" = (setTargetToFoundTarget, suggestEscort);
+  		ESCORTING = ("setDesiredRangeTo: 0.0", "setStateTo: FLYING_ESCORT");
+		UPDATE = (scanForFormationLeader, "pauseAI: 15.0");
+	};
+	"LOOK_FOR_BUSINESS" =
+	{
+		ENTER = (scanForFormationLeader);
+		RESTARTED = ("setStateTo: BEGIN_BUSINESS");
+		"LAUNCHED OKAY" = ("setStateTo: CLEAR_STATION");
+		ATTACKED = (setTargetToPrimaryAggressor, "setAITo: interceptAI.plist");
+		ESCORTING = ("setDesiredRangeTo: 0.0", "setStateTo: FLYING_ESCORT");
+		"TARGET_FOUND" = (setTargetToFoundTarget, suggestEscort);
+		"NOTHING_FOUND" = ("switchAITo: route1patrolAI.plist");
+		UPDATE = ("pauseAI: 7.5", scanForFormationLeader);
+	};
+}

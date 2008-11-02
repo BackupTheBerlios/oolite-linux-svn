@@ -1,0 +1,87 @@
+(
+	(
+		"\\n",
+		" "
+	),
+	(
+		"\\t",
+		" "
+	),
+	(
+		// must come before ' Cr'
+		Cruiser,
+		"[[inpt PHON]]kr1UWz2AXr[[inpt TEXT]]"
+	),
+	(
+		" Cr",
+		" credits"
+	),
+	(
+		" s.",
+		" seconds"
+	),
+	(
+		Purse,
+		", Total "
+	),
+	(
+		"Mark III",
+		"Mach Three"
+	),
+	(
+		"Mark II",
+		"Mach Two"
+	),
+	(
+		"Mark I",
+		"Mach One"
+	),
+	(
+		GalCop,
+		"[[inpt PHON]]g1AElkUXp[[inpt TEXT]]"
+	),
+	(
+		Witchspace,
+		"[[inpt PHON]]w1IHCsp2EYs[[inpt TEXT]]"
+	),
+	(
+		"Fer-de-Lance",
+		"[[inpt PHON]]f1<EY<<AE=dEH=l2UXns[[inpt TEXT]]"
+	),
+	(
+		Sidewinder,
+		"[[inpt PHON]]s1AYdw2AYndAX[[inpt TEXT]]"
+	),
+	(
+		Rebel,
+		"[[inpt PHON]]rEHbUXl[[inpt TEXT]]"
+	),
+	(
+		"Metal fragment",
+		"metal [[inpt PHON]]fr1AEgmUHnt[[inpt TEXT]]"
+	),
+	(
+		Ident,
+		Identification
+	),
+	(
+		"©",
+		"copyright"
+	),
+	(
+		"™",
+		"trademark"
+	),
+	(
+		"®",
+		"registered trademark"
+	),
+	(
+		"₢",
+		"credits"
+	),
+	(
+		"€",
+		"credits"
+	)
+)
