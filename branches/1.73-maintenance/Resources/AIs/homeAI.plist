@@ -1,8 +1,0 @@
-{
-	GLOBAL =
-	{
-		"DESIRED_RANGE_ACHIEVED" = (landOnPlanet);
-		"APPROACHING_SURFACE" = (landOnPlanet);
-		UPDATE = (setCourseToPlanet, "setSpeedFactorTo: 1.0", performFlyToRangeFromDestination, "pauseAI: 10.0");
-	};
-}

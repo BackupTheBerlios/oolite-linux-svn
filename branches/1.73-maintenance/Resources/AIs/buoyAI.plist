@@ -1,8 +1,0 @@
-{
-	GLOBAL =
-	{
-		ENTER = (performIdle); 
-		ATTACKED = (setTargetToPrimaryAggressor, broadcastDistressMessage); 
-		UPDATE = ("pauseAI: 3600"); 
-	}; 
-}
