@@ -1,0 +1,17 @@
+Major versions:
+Doc/OoliteReadMe.doc
+Doc/OoliteReadMe.pdf
+Doc/ReadMe.rtfd
+
+Minor versions:
+installers/autopackage/default.x86.apspec
+debian/changelog.in
+src/Cocoa/Info-Oolite.plist
+src/Cocoa/oolite-version.plist
+Resources/Scripts/*
+Resources/InfoPlist.strings (note: UTF-16)
+
+On release:
+http://www.oolite.org/download (current version six times, previous version for Windows updater once)
+Topic of #oolite
+latest news at berlios.de 
