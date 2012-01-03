@@ -29,7 +29,7 @@ MA 02110-1301, USA.
 this.name			= "oolite-material-test-suite";
 this.version		= "1.2";
 this.author			= "Jens Ayton";
-this.copyright		= "© 2010 the Oolite team.";
+this.copyright		= "© 2010-2012 the Oolite team.";
 
 
 this.startUp = function()
