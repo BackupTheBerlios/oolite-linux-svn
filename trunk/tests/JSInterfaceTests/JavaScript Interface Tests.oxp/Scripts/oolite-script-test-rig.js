@@ -30,7 +30,7 @@ this.name			= "oolite-script-test-rig";
 this.author			= "Jens Ayton";
 this.copyright		= "© 2010–2011 the Oolite team.";
 this.description	= "Driver for JavaScript unit tests.";
-this.version		= "1.75";
+this.version		= "1.77";
 
 
 (function ()

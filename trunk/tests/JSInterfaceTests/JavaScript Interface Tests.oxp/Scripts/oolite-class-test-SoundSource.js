@@ -28,7 +28,7 @@ this.name			= "oolite-class-test-SoundSource";
 this.author			= "Jens Ayton";
 this.copyright		= "© 2011 the Oolite team.";
 this.description	= "Test cases for SoundSource and Sound.";
-this.version		= "1.75";
+this.version		= "1.77";
 
 
 this.startUp = function ()
