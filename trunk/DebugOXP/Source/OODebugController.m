@@ -63,7 +63,7 @@ static OODebugController *sSingleton = nil;
 
 @implementation OODebugController
 
-- (id<OODebuggerInterface>) setUpDebugger
+- (id <OODebuggerInterface>) setUpDebugger
 {
 	return [[[OOMacDebugger alloc] initWithController:jsConsoleController] autorelease];
 }
