@@ -1,6 +1,6 @@
 /*
 
-OOLeopardJoystickManager.m
+OOMacJoystickManager.m
 By Alex Smith and Jens Ayton
 
 Oolite
@@ -23,12 +23,12 @@ MA 02110-1301, USA.
 
 */
 
-#import "OOLeopardJoystickManager.h"
+#import "OOMacJoystickManager.h"
 #import "OOLogging.h"
 #import "OOCollectionExtractors.h"
 
 
-@interface OOLeopardJoystickManager ()
+@interface OOMacJoystickManager ()
 
 - (void) handleInputEvent:(IOHIDValueRef)value;
 - (void) handleJoystickAttach:(IOHIDDeviceRef)device;
@@ -42,7 +42,7 @@ static void HandleInputValueCallback(void * inContext, IOReturn inResult, void* 
 static void HandleDeviceRemovalCallback(void * inContext, IOReturn inResult, void* inSender, IOHIDDeviceRef  inIOHIDDeviceRef);
 
 
-@implementation OOLeopardJoystickManager
+@implementation OOMacJoystickManager
 
 - (id) init
 {
@@ -266,7 +266,7 @@ static uint8_t MapHatValue(CFIndex value, CFIndex max)
 		unsigned gammaIndex = floor(axisValue * kJoystickGammaTableSize);
 		
 		/*
-			CRASH: r4435, Mac OS X 10.6.6, x86_64 -[OOLeopardJoystickManager handleInputEvent:] + 260
+			CRASH: r4435, Mac OS X 10.6.6, x86_64 -[OOMacJoystickManager handleInputEvent:] + 260
 			http://aegidian.org/bb/viewtopic.php?f=3&t=9382
 			The instruction is:
 				movl (%r15,%rbx,4), %r12d
@@ -342,19 +342,19 @@ static uint8_t MapHatValue(CFIndex value, CFIndex max)
 //Thunking to Objective-C
 static void HandleDeviceMatchingCallback(void * inContext, IOReturn inResult, void* inSender, IOHIDDeviceRef  inIOHIDDeviceRef)
 {
-	[(OOLeopardJoystickManager *)inContext handleDeviceAttach:inIOHIDDeviceRef];
+	[(OOMacJoystickManager *)inContext handleDeviceAttach:inIOHIDDeviceRef];
 }
 
 
 
 static void HandleInputValueCallback(void * inContext, IOReturn inResult, void* inSender, IOHIDValueRef  inIOHIDValueRef)
 {
-	[(OOLeopardJoystickManager *)inContext handleInputEvent:inIOHIDValueRef];
+	[(OOMacJoystickManager *)inContext handleInputEvent:inIOHIDValueRef];
 }
 
 
 
 static void HandleDeviceRemovalCallback(void * inContext, IOReturn inResult, void* inSender, IOHIDDeviceRef  inIOHIDDeviceRef)
 {
-	[(OOLeopardJoystickManager *)inContext handleDeviceRemoval:inIOHIDDeviceRef];
+	[(OOMacJoystickManager *)inContext handleDeviceRemoval:inIOHIDDeviceRef];
 }
