@@ -88,10 +88,10 @@ this.startUp = function ()
 		var v = new Vector3D(0, 1, 0);
 		
 		var ninetyDegrees = new Vector3D(1, 0, 0);
-		require.near("ninetyDegrees", ninetyDegrees, degToRad(90), 1e-6);
+		require.near("ninetyDegrees", ninetyDegrees.angleTo(v), degToRad(90), 1e-6);
 		
 		var fortyfiveDegrees = new Vector3D(0, 100, 100);
-		require.near("fortyfiveDegrees", fortyfiveDegrees, degToRad(45), 1e-6);
+		require.near("fortyfiveDegrees", fortyfiveDegrees.angleTo(v), degToRad(45), 1e-6);
 		
 		var opposite = new Vector3D(0, 0, 0).subtract(v).angleTo(v);
 		require.near("opposite", opposite, Math.PI, 1e-6);
@@ -172,19 +172,19 @@ this.startUp = function ()
 		var v = new Vector3D(1, 0, 0);
 		var u = new Vector3D(0, 1, 0);
 		var w = new Vector3D(0, Math.sqrt(0.5), Math.sqrt(0.5));
-
+		
 		var diff = v.rotationTo(u);
 		require.quaternion("diff", diff, [Math.sqrt(0.5), 0, 0, Math.sqrt(0.5)], 1e-6);
-
+		
 		var diff2 = u.rotationTo(v);
 		require.quaternion("diff2", diff2, [Math.sqrt(0.5), 0, 0, -Math.sqrt(0.5)], 1e-6);
-
+		
 		var diff3 = u.rotationTo(w);
 		require.quaternion("diff3", diff3, [0.92388, 0.382683, 0, 0], 1e-6);
-
+		
 		var diff4 = v.rotationTo(u, Math.PI * 0.25);
-		require.quaternion("diff3", diff3, [0.92388, 0, 0, 0.382683], 1e-6);
-
+		require.quaternion("diff4", diff4, [0.92388, 0, 0, 0.382683], 1e-6);
+		
 		var diffCastFromArray = v.rotationTo([0, 0, 1]);
 		require.quaternion("diffCastFromArray", diffCastFromArray, [Math.sqrt(0.5), 0, -Math.sqrt(0.5), 0], 1e-6);
 	});
