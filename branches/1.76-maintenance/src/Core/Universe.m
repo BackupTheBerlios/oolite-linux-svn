@@ -7601,6 +7601,10 @@ static double estimatedTimeForJourney(double distance, int hops)
 						}
 					}
 				}
+				else
+				{
+					[options removeObject:equipmentKey];
+				}
 			}
 			// i18n: Some languages require that no conversion to lower case string takes place.
 			BOOL lowercaseIgnore = [[self descriptions] oo_boolForKey:@"lowercase_ignore"];
