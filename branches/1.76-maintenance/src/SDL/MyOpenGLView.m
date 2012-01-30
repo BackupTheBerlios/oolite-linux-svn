@@ -3,7 +3,7 @@
 MyOpenGLView.m
 
 Oolite
-Copyright (C) 2004-2011 Giles C Williams and contributors
+Copyright (C) 2004-2012 Giles C Williams and contributors
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -79,6 +79,43 @@ MA 02110-1301, USA.
 	[mode setValue: [NSNumber numberWithInt: 0] forKey: kOODisplayRefreshRate];
 
 	return [mode autorelease];
+}
+
+
+- (void) createSurface
+{
+	// Changing these flags can trigger texture bugs.
+	const int videoModeFlags = SDL_HWSURFACE | SDL_OPENGL | SDL_RESIZABLE;
+	
+	if (showSplashScreen)
+	{
+#if OOLITE_WINDOWS
+		// Pre setVideoMode adjustments.
+		NSSize tmp = currentWindowSize;
+		updateContext = NO;	//don't update the window!
+		ShowWindow(SDL_Window,SW_HIDE);
+		MoveWindow(SDL_Window,GetSystemMetrics(SM_CXSCREEN)/2,GetSystemMetrics(SM_CYSCREEN)/2,1,1,TRUE);
+		ShowWindow(SDL_Window,SW_MINIMIZE);
+		
+		// Initialise the SDL surface. (need custom SDL.dll)
+		surface = SDL_SetVideoMode(firstScreen.width, firstScreen.height, 32, videoModeFlags);
+		
+		// Post setVideoMode adjustments.
+		currentWindowSize=tmp;
+#else
+		// Changing the flags can trigger texture bugs.
+		surface = SDL_SetVideoMode(8, 8, 32, videoModeFlags);
+#endif
+	}
+	else
+	{
+#if OOLITE_WINDOWS
+		updateContext = YES;
+#endif
+		surface = SDL_SetVideoMode(firstScreen.width, firstScreen.height, 32, videoModeFlags);
+		// blank the surface / go to fullscreen
+		[self initialiseGLWithSize: firstScreen];
+	}
 }
 
 
@@ -161,10 +198,10 @@ MA 02110-1301, USA.
 	}
 	SDL_FreeSurface(icon);
 	
-	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 5);
-	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 5);
-	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 5);
-	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
+	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
+	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 32);
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, 1);	// V-sync on by default.
 
@@ -176,49 +213,28 @@ MA 02110-1301, USA.
 	[self loadFullscreenSettings];
 	[self loadWindowSize];
 	
-	// Changing these flags can trigger texture bugs.
-	int videoModeFlags = SDL_HWSURFACE | SDL_OPENGL | SDL_RESIZABLE;
 	// Set up the drawing surface's dimensions.
 	firstScreen= (fullScreen) ? [self modeAsSize: currentSize] : currentWindowSize;
 	viewSize = firstScreen;	// viewSize must be set prior to splash screen initialization
-
-	if (showSplashScreen)
+	
+	[self createSurface];
+	if (surface == NULL)
 	{
-	  #if OOLITE_WINDOWS
-		// Pre setVideoMode adjustments.
-		NSSize tmp = currentWindowSize;
-		updateContext = NO;	//don't update the window!
-		ShowWindow(SDL_Window,SW_HIDE);
-		MoveWindow(SDL_Window,GetSystemMetrics(SM_CXSCREEN)/2,GetSystemMetrics(SM_CYSCREEN)/2,1,1,TRUE);
-		ShowWindow(SDL_Window,SW_MINIMIZE);
+		// Retry, allowing 16-bit contexts.
+		SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 5);
+		SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 5);
+		SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 5);
+		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
+		[self createSurface];
 		
-		// Initialise the SDL surface. (need custom SDL.dll)
-		surface = SDL_SetVideoMode(firstScreen.width, firstScreen.height, 32, videoModeFlags);
-		
-		// Post setVideoMode adjustments.
-		currentWindowSize=tmp;
-	  #else
-		// Changing the flags can trigger texture bugs.
-		surface = SDL_SetVideoMode(8, 8, 32, videoModeFlags );
-	  #endif
+		if (surface == NULL)
+		{
+			char * errStr = SDL_GetError();
+			OOLogERR(@"display.mode.error", @"Could not create display surface: %s", errStr);
+			exit(1);
+		}
 	}
-	else
-	{
-	  #if OOLITE_WINDOWS
-		updateContext = YES;
-	  #endif
-		surface = SDL_SetVideoMode(firstScreen.width, firstScreen.height, 32, videoModeFlags);
-		// blank the surface / go to fullscreen
-		[self initialiseGLWithSize: firstScreen];
-	}
-
-    if (!surface)
-    {
-        char * errStr = SDL_GetError();
-        OOLog(@"display.mode.error", @"ERROR creating display: %s", errStr);
-    }
-    assert(surface != NULL);
-
+	
 	bounds.size.width = surface->w;
 	bounds.size.height = surface->h;
 	
