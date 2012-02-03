@@ -396,7 +396,7 @@
 			<object class="NSWindowTemplate" id="287904945">
 				<int key="NSWindowStyleMask">9</int>
 				<int key="NSWindowBacking">2</int>
-				<string key="NSWindowRect">{{6, 368}, {640, 480}}</string>
+				<string key="NSWindowRect">{{44, 222}, {640, 480}}</string>
 				<int key="NSWTFlags">1886912512</int>
 				<string key="NSWindowTitle">Oolite</string>
 				<string key="NSWindowClass">NSWindow</string>
@@ -434,6 +434,7 @@
 													</set>
 													<string key="NSFrame">{{128, 41}, {384, 384}}</string>
 													<reference key="NSSuperview" ref="336234777"/>
+													<reference key="NSWindow"/>
 													<reference key="NSNextKeyView" ref="67986506"/>
 													<bool key="NSEnabled">YES</bool>
 													<object class="NSImageCell" key="NSCell" id="502141629">
@@ -455,7 +456,7 @@
 													<int key="NSvFlags">298</int>
 													<string key="NSFrame">{{17, 8}, {606, 17}}</string>
 													<reference key="NSSuperview" ref="336234777"/>
-													<reference key="NSNextKeyView"/>
+													<reference key="NSWindow"/>
 													<bool key="NSEnabled">YES</bool>
 													<object class="NSTextFieldCell" key="NSCell" id="342735271">
 														<int key="NSCellFlags">67239424</int>
@@ -486,17 +487,20 @@
 											</array>
 											<string key="NSFrame">{{0, 30}, {640, 424}}</string>
 											<reference key="NSSuperview" ref="464715030"/>
+											<reference key="NSWindow"/>
 											<reference key="NSNextKeyView" ref="1012018604"/>
 											<string key="NSClassName">NSView</string>
 										</object>
 									</array>
 									<string key="NSFrameSize">{640, 480}</string>
 									<reference key="NSSuperview" ref="506709247"/>
+									<reference key="NSWindow"/>
 									<reference key="NSNextKeyView" ref="336234777"/>
 								</object>
 							</array>
 							<string key="NSFrameSize">{640, 480}</string>
 							<reference key="NSSuperview" ref="796882467"/>
+							<reference key="NSWindow"/>
 							<reference key="NSNextKeyView" ref="464715030"/>
 							<string key="NSOffsets">{0, 0}</string>
 							<object class="NSTextFieldCell" key="NSTitleCell">
@@ -535,9 +539,10 @@
 					</array>
 					<string key="NSFrameSize">{640, 480}</string>
 					<reference key="NSSuperview"/>
+					<reference key="NSWindow"/>
 					<reference key="NSNextKeyView" ref="506709247"/>
 				</object>
-				<string key="NSScreenRect">{{0, 0}, {1366, 746}}</string>
+				<string key="NSScreenRect">{{0, 0}, {1920, 1178}}</string>
 				<string key="NSMinSize">{640, 502}</string>
 				<string key="NSMaxSize">{10000000000000, 10000000000000}</string>
 				<string key="NSFrameAutosaveName">oolite-main-window</string>
@@ -559,7 +564,7 @@
 				<nil key="NSUserInterfaceItemIdentifier"/>
 				<string key="NSWindowContentMinSize">{640, 400}</string>
 				<object class="NSView" key="NSWindowView" id="506024517">
-					<nil key="NSNextResponder"/>
+					<reference key="NSNextResponder"/>
 					<int key="NSvFlags">256</int>
 					<array class="NSMutableArray" key="NSSubviews">
 						<object class="PDFView" id="18486341">
@@ -570,6 +575,7 @@
 							</set>
 							<string key="NSFrameSize">{640, 480}</string>
 							<reference key="NSSuperview" ref="506024517"/>
+							<reference key="NSWindow"/>
 							<int key="DisplayMode">1</int>
 							<bool key="PageBreaks">NO</bool>
 							<float key="ScaleFactor">1.0212417840957642</float>
@@ -577,8 +583,10 @@
 						</object>
 					</array>
 					<string key="NSFrameSize">{640, 480}</string>
+					<reference key="NSSuperview"/>
+					<reference key="NSWindow"/>
 				</object>
-				<string key="NSScreenRect">{{0, 0}, {1366, 746}}</string>
+				<string key="NSScreenRect">{{0, 0}, {1920, 1178}}</string>
 				<string key="NSMinSize">{640, 422}</string>
 				<string key="NSMaxSize">{10000000000000, 10000000000000}</string>
 				<string key="NSFrameAutosaveName">oolitehelp</string>
@@ -616,7 +624,7 @@
 					<reference key="NSSuperview"/>
 					<reference key="NSWindow"/>
 				</object>
-				<string key="NSScreenRect">{{0, 0}, {1366, 746}}</string>
+				<string key="NSScreenRect">{{0, 0}, {1920, 1178}}</string>
 				<string key="NSMinSize">{213, 129}</string>
 				<string key="NSMaxSize">{10000000000000, 10000000000000}</string>
 				<bool key="NSWindowIsRestorable">YES</bool>
@@ -1477,14 +1485,20 @@
 				<string key="145.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
 				<string key="149.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
 				<string key="150.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
+				<boolean value="YES" key="198.IBNSWindowAutoPositionCentersHorizontal"/>
+				<boolean value="YES" key="198.IBNSWindowAutoPositionCentersVertical"/>
 				<string key="198.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
 				<string key="198.IBWindowTemplateEditedContentRect">{{274, 644}, {640, 480}}</string>
 				<boolean value="YES" key="198.NSWindowTemplate.visibleAtLaunch"/>
 				<string key="199.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
 				<string key="205.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
 				<string key="224.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
+				<boolean value="YES" key="225.IBNSWindowAutoPositionCentersHorizontal"/>
+				<boolean value="YES" key="225.IBNSWindowAutoPositionCentersVertical"/>
 				<string key="225.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
 				<string key="225.IBWindowTemplateEditedContentRect">{{358, 638}, {640, 480}}</string>
+				<boolean value="YES" key="256.IBNSWindowAutoPositionCentersHorizontal"/>
+				<boolean value="YES" key="256.IBNSWindowAutoPositionCentersVertical"/>
 				<string key="256.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
 				<string key="257.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
 				<string key="260.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
@@ -1548,19 +1562,13 @@
 					<string key="className">GameController</string>
 					<string key="superclassName">NSObject</string>
 					<dictionary class="NSMutableDictionary" key="actions">
-						<string key="doStuff:">id</string>
 						<string key="goFullscreen:">id</string>
 						<string key="showAddOnsAction:">id</string>
 						<string key="showLogAction:">id</string>
 						<string key="showLogFolderAction:">id</string>
-						<string key="showScreeniesAction:">id</string>
 						<string key="showSnapshotsAction:">id</string>
 					</dictionary>
 					<dictionary class="NSMutableDictionary" key="actionInfosByName">
-						<object class="IBActionInfo" key="doStuff:">
-							<string key="name">doStuff:</string>
-							<string key="candidateClassName">id</string>
-						</object>
 						<object class="IBActionInfo" key="goFullscreen:">
 							<string key="name">goFullscreen:</string>
 							<string key="candidateClassName">id</string>
@@ -1575,10 +1583,6 @@
 						</object>
 						<object class="IBActionInfo" key="showLogFolderAction:">
 							<string key="name">showLogFolderAction:</string>
-							<string key="candidateClassName">id</string>
-						</object>
-						<object class="IBActionInfo" key="showScreeniesAction:">
-							<string key="name">showScreeniesAction:</string>
 							<string key="candidateClassName">id</string>
 						</object>
 						<object class="IBActionInfo" key="showSnapshotsAction:">
@@ -1652,28 +1656,6 @@
 				<object class="IBPartialClassDescription">
 					<string key="className">MyOpenGLView</string>
 					<string key="superclassName">OpenGLViewSuperClass</string>
-					<object class="NSMutableDictionary" key="actions">
-						<string key="NS.key.0">pollControls:</string>
-						<string key="NS.object.0">id</string>
-					</object>
-					<object class="NSMutableDictionary" key="actionInfosByName">
-						<string key="NS.key.0">pollControls:</string>
-						<object class="IBActionInfo" key="NS.object.0">
-							<string key="name">pollControls:</string>
-							<string key="candidateClassName">id</string>
-						</object>
-					</object>
-					<object class="NSMutableDictionary" key="outlets">
-						<string key="NS.key.0">gameController</string>
-						<string key="NS.object.0">GameController</string>
-					</object>
-					<object class="NSMutableDictionary" key="toOneOutletInfosByName">
-						<string key="NS.key.0">gameController</string>
-						<object class="IBToOneOutletInfo" key="NS.object.0">
-							<string key="name">gameController</string>
-							<string key="candidateClassName">GameController</string>
-						</object>
-					</object>
 					<object class="IBClassDescriptionSource" key="sourceIdentifier">
 						<string key="majorKey">IBProjectSource</string>
 						<string key="minorKey">./Classes/MyOpenGLView.h</string>
