@@ -417,6 +417,8 @@ static NSString *GetGLSLInfoLog(GLhandleARB shaderObject)
 	
 	result = [NSString stringWithUTF8String:log];
 	if (result == nil)  result = [[[NSString alloc] initWithBytes:log length:length - 1 encoding:NSISOLatin1StringEncoding] autorelease];
+	free(log);
+	
 	return result;
 }
 
