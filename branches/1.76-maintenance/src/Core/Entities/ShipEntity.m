@@ -7291,6 +7291,8 @@ Vector positionOffsetForShipInRotationToAlignment(ShipEntity* ship, Quaternion q
 				stick_roll = - max_flight_roll * reversePlayer * 0.125 * factor;  // only reverse sign for the player;
 			if (d_right < -min_d)
 				stick_roll = + max_flight_roll * reversePlayer * 0.125 * factor;
+			if (fabs(d_right) < fabs(stick_roll) * delta_t) 
+				stick_roll = fabs(d_right) / delta_t * (stick_roll<0 ? -1 : 1); // don't overshoot heading
 		}
 
 		if (d_up < -min_d)
@@ -7302,6 +7304,8 @@ Vector positionOffsetForShipInRotationToAlignment(ShipEntity* ship, Quaternion q
 				stick_roll = + max_flight_roll * reversePlayer * 0.125 * factor;  // only reverse sign for the player;
 			if (d_right < -min_d)
 				stick_roll = - max_flight_roll * reversePlayer * 0.125 * factor;
+			if (fabs(d_right) < fabs(stick_roll) * delta_t) 
+				stick_roll = fabs(d_right) / delta_t * (stick_roll<0 ? -1 : 1); // don't overshoot heading
 		}
 
 		if (stick_roll == 0.0)
@@ -7313,6 +7317,8 @@ Vector positionOffsetForShipInRotationToAlignment(ShipEntity* ship, Quaternion q
 				stick_pitch = - max_flight_pitch * reverse * 0.125 * factor;  //pitch_pitch * reverse;
 			if (d_up < -min_d)
 				stick_pitch = + max_flight_pitch * reverse * 0.125 * factor;
+			if (fabs(d_up) < fabs(stick_pitch) * delta_t) 
+				stick_pitch = fabs(d_up) / delta_t * (stick_pitch<0 ? -1 : 1); // don't overshoot heading
 		}
 	}
 
