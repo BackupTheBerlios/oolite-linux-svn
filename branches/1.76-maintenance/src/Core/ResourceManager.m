@@ -67,6 +67,7 @@ extern NSDictionary* ParseOOSScripts(NSString* script);
 
 static NSMutableArray	*sSearchPaths;
 static BOOL				sUseAddOns = YES;
+static BOOL				sFirstRun = YES;
 static NSMutableArray	*sOXPsWithMessagesFound;
 static NSMutableArray	*sExternalPaths;
 static NSMutableArray	*sErrors;
@@ -225,8 +226,7 @@ static NSMutableDictionary *sStringCache;
 		if ([sSearchPaths containsObject:path])  [self checkOXPMessagesInPath:path];
 	}
 	[self checkCacheUpToDateForPaths:sSearchPaths];
-	[self logPaths];
-
+	
 	return sSearchPaths;
 }
 
@@ -237,7 +237,6 @@ static NSMutableDictionary *sStringCache;
 		if (!sUseAddOns)
 		{
 			sSearchPaths = [[NSMutableArray alloc] init];
-			[self logPaths];
 		}
 	return sUseAddOns ? [self pathsWithAddOns] : (NSArray *)[NSArray arrayWithObject:[self builtInPath]];
 }
@@ -251,9 +250,9 @@ static NSMutableDictionary *sStringCache;
 
 + (void)setUseAddOns:(BOOL)useAddOns
 {
-	useAddOns = (useAddOns != 0);
-	if (sUseAddOns != useAddOns)
+	if (sFirstRun || sUseAddOns != useAddOns)
 	{
+		sFirstRun = NO;
 		sUseAddOns = useAddOns;
 		[ResourceManager clearCaches];
 		
@@ -337,7 +336,7 @@ static NSMutableDictionary *sStringCache;
 	requirementsMet = [self areRequirementsFulfilled:requirements forOXP:path];
 	
 	if (requirementsMet)  [searchPaths addObject:path];
-	else
+	else if (EXPECT_NOT(![UNIVERSE strict]))
 	{
 		NSString *version = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleVersion"];
 		OOLog(@"oxp.versionMismatch", @"OXP %@ is incompatible with version %@ of Oolite.", path, version);

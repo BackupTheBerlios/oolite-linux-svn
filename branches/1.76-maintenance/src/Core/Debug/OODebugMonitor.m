@@ -72,14 +72,15 @@ static OODebugMonitor *sSingleton = nil;
 
 
 @implementation OODebugMonitor
+#if OOLITE_GNUSTEP
+	NSString					*NSApplicationWillTerminateNotification = @"ApplicationWillTerminate";
+#endif
 
 - (id)init
 {
 	NSUserDefaults				*defaults = nil;
 	NSDictionary				*config = nil;
-#if OOLITE_GNUSTEP
-	NSString					*NSApplicationWillTerminateNotification = @"ApplicationWillTerminate";
-#endif
+
 	
 	self = [super init];
 	if (self != nil)
@@ -655,6 +656,14 @@ typedef struct
 		OOLog(@"debugMonitor.disconnect.ignored", @"Attempt to disconnect debugger %@, which is not current debugger; ignoring.", debugger);
 	}
 }
+
+
+#if OOLITE_GNUSTEP
+- (void) applicationWillTerminate
+{
+	[[NSNotificationCenter defaultCenter] postNotificationName:NSApplicationWillTerminateNotification object:nil];
+}
+#endif
 
 
 - (void)applicationWillTerminate:(NSNotification *)notification

@@ -266,7 +266,9 @@ GLfloat docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEVEL, DOC
 	self = [super init];
 	if (self == nil)  return nil;
 	
-	NSUserDefaults *prefs = [NSUserDefaults standardUserDefaults];	
+	NSUserDefaults *prefs = [NSUserDefaults standardUserDefaults];
+	
+	strict = [prefs oo_boolForKey:@"strict-gameplay" defaultValue:NO];
 	
 	[self setGameView:inGameView];
 	gSharedUniverse = self;
@@ -286,15 +288,13 @@ GLfloat docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEVEL, DOC
 	// Preload cache
 	[OOCacheManager sharedCache];
 	
-	strict = [prefs oo_boolForKey:@"strict-gameplay" defaultValue:NO];
-	
 #if OOLITE_SPEECH_SYNTH
 	OOLog(@"speech.synthesis", @"Spoken messages are %@.", ([prefs oo_boolForKey:@"speech_on" defaultValue:NO] ? @"on" :@"off"));
 #endif
 	
 	// init the Resource Manager
-	[ResourceManager setUseAddOns:!strict];
-	[ResourceManager paths];
+	[ResourceManager setUseAddOns:!strict];	// also logs paths
+	//[ResourceManager paths]; //redundant
 	
 	// Set up the internal game strings
 	[self loadDescriptions];
@@ -8673,7 +8673,7 @@ Entity *gOOJSPlayerIfStale = nil;
 	
 	_sessionID++;	// Must be after removing old entities and before adding new ones.
 	
-	[ResourceManager setUseAddOns:!strict];
+	[ResourceManager setUseAddOns:!strict];	// also logs paths
 	//[ResourceManager loadScripts]; // initialised inside [player setUp]!
 	
 	// NOTE: Anything in the sharedCache is now trashed and must be
