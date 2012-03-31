@@ -6020,7 +6020,14 @@ static NSDictionary	*sCachedSystemData = nil;
 	if (object != nil)  [overrideDict setObject:object forKey:key];
 	else  [overrideDict removeObjectForKey:key];
 	
-	[localPlanetInfoOverrides setObject:overrideDict forKey:planetKey];
+	if ([overrideDict count] > 0)
+	{
+		[localPlanetInfoOverrides setObject:overrideDict forKey:planetKey];
+	}
+	else
+	{
+		[localPlanetInfoOverrides removeObjectForKey:planetKey];
+	}
 }
 
 
