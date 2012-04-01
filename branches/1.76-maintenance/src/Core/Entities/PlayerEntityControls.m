@@ -1601,6 +1601,7 @@ static NSTimeInterval	time_last_frame;
 				if ([gameView isDown:gvMouseDoubleClick])
 				{
 					[gameView clearMouse];
+					[self noteGUIWillChangeTo:GUI_SCREEN_SYSTEM_DATA];
 					[self setGuiToSystemDataScreen];
 				}
 				if ([gameView isDown:key_map_home])
