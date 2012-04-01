@@ -291,9 +291,9 @@ OOINLINE void GLColorWithOverallAlpha(const GLfloat *color, GLfloat alpha)
 	if ([gui_info objectForKey:BACKGROUND_RGBA_KEY])
 		[gui setBackgroundColor:[OOColor colorFromString:[gui_info oo_stringForKey:BACKGROUND_RGBA_KEY]]];
 	if ([gui_info objectForKey:ALPHA_KEY])
-		[gui setMaxAlpha: [gui_info oo_floatForKey:ALPHA_KEY]];
+		[gui setMaxAlpha: OOClamp_0_max_f([gui_info oo_floatForKey:ALPHA_KEY],1.0f)];
 	else
-		[gui setMaxAlpha: 1.0];
+		[gui setMaxAlpha: 1.0f];
 }
 
 
@@ -303,7 +303,7 @@ OOINLINE void GLColorWithOverallAlpha(const GLfloat *color, GLfloat alpha)
 	// then resize and reposition them accordingly.
 	
 	GuiDisplayGen*	gui = [UNIVERSE messageGUI];
-	NSDictionary*	gui_info = [info objectForKey:@"message_gui"];
+	NSDictionary*	gui_info = [info oo_dictionaryForKey:@"message_gui"];
 	if (gui && gui_info)
 	{
 		/*
@@ -335,7 +335,7 @@ OOINLINE void GLColorWithOverallAlpha(const GLfloat *color, GLfloat alpha)
 	// And now set up the comms log
 	
 	gui = [UNIVERSE commLogGUI];
-	gui_info = [info objectForKey:@"comm_log_gui"];
+	gui_info = [info oo_dictionaryForKey:@"comm_log_gui"];
 
 	if (gui && gui_info)
 	{
