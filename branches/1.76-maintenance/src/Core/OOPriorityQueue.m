@@ -498,10 +498,10 @@ OOINLINE NSComparisonResult PQCompare(id a, id b, SEL comparator)
 	if (kMinCapacity < _capacity)
 	{
 		// Remove two thirds of free space, if at least three slots are free.
-		amountToRemove = _capacity - _count * 2 / 3;
+		amountToRemove = (_capacity - _count) * 2 / 3;
 		if (2 < amountToRemove)
 		{
-			newCapacity = _capacity = amountToRemove;
+			newCapacity = _capacity - amountToRemove;
 			newBuffer = realloc(_heap, newCapacity * sizeof(id));
 			if (newBuffer != NULL)
 			{
