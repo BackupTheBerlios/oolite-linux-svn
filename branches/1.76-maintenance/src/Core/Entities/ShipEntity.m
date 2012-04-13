@@ -4064,6 +4064,8 @@ ShipEntity* doOctreesCollide(ShipEntity* prime, ShipEntity* other)
 		Entity		*father = my_owner;
 		OOMatrix	r_mat;
 		
+		OOGL(glPushMatrix());
+		
 		while ((father)&&(father != last)  &&father != NO_TARGET)
 		{
 			r_mat = [father drawRotationMatrix];
@@ -4074,12 +4076,12 @@ ShipEntity* doOctreesCollide(ShipEntity* prime, ShipEntity* other)
 		}
 		
 		GLLoadOOMatrix([UNIVERSE viewMatrix]);
-		OOGL(glPopMatrix());
-		OOGL(glPushMatrix());
 		GLTranslateOOVector(abspos);
 		GLMultOOMatrix(rotMatrix);
 		
 		[self drawEntity:immediate :translucent];
+		
+		OOGL(glPopMatrix());
 	}
 	else
 	{
