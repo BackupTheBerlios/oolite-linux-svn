@@ -4129,7 +4129,7 @@ static bool minShieldLevelPercentageInitialised = false;
 	
 	OOShipDamageType damageType = kOODamageTypeEnergy;
 	if (energyMine)  damageType = kOODamageTypeCascadeWeapon;
-	if (amount > 0.0)  [self noteTakingDamage:amount from:other type:damageType];
+	[self noteTakingDamage:amount from:other type:damageType];
 	if (cascade) energy = 0.0; // explicit set energy to zero when cascading, in case an oxp raised the energy in previous line.
 	
 	if (energy <= 0.0) //use normal ship temperature calculations for heat damage
