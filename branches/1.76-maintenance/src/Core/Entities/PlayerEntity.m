@@ -881,15 +881,25 @@ static GLfloat		sBaseMass = 0.0;
 	max_cargo = [dict oo_unsignedIntForKey:@"max_cargo" defaultValue:max_cargo];
 	if (max_cargo > original_hold_size)  [self addEquipmentItem:@"EQ_CARGO_BAY"];
 	max_cargo = original_hold_size + ([self hasExpandedCargoBay] ? extra_cargo : 0);
-	if (max_cargo >= max_passengers * 5)
+	if (max_cargo < max_passengers * 5)
 	{
-		max_cargo -= max_passengers * 5;
-	}
-	else // Handle case where something went wrong. Possibly the save file was hacked to contain more passenger cabins than the available cargo space would allow - Nikos 20110731
-	{
+		// Handle case where something went wrong. Possibly the save file was hacked to contain more passenger cabins than the available cargo space would allow - Nikos 20110731
 		unsigned originalMaxPassengers = max_passengers;
 		max_passengers = (unsigned)(max_cargo / 5);		// we should really make the magic number 5 a constant - something like PASSENGER_BERTH_REQUIRED_SPACE or similar
-		OOLogWARN(@"setCommanderDataFromDictionary.max_cargo.isNegative", @"max_cargo for player ship %@ gone negative, probably due to max_passengers (%u) being set to a value that requires more cargo space than it is available on player ship. Resetting max_passengers to %u to compensate.", [self name], originalMaxPassengers, max_passengers);
+		OOLogWARN(@"setCommanderDataFromDictionary.inconsistency.max_cargo", @"player ship %@ had max_passengers (%u) set to a value requiring more cargo space than currently available. Resetting max_passengers to %u to compensate.", [self name], originalMaxPassengers, max_passengers);
+	}
+	max_cargo -= max_passengers * 5;
+	
+	// Do we have extra passengers?
+	if (passengers && ([passengers count] > max_passengers))
+	{
+		OOLogWARN(@"setCommanderDataFromDictionary.inconsistency.passengers", @"player ship %@ had more passengers (%u) than passenger berths (%u). Removing extra passengers.", [self name], [passengers count], max_passengers);
+		unsigned i;
+		for (i = [passengers count] - 1; i >= max_passengers; i--)
+		{
+			[passenger_record removeObjectForKey:[[passengers oo_dictionaryAtIndex:i] oo_stringForKey:PASSENGER_KEY_NAME]];
+			[passengers removeObjectAtIndex:i];
+		}
 	}
 	
 	credits = OODeciCreditsFromObject([dict objectForKey:@"credits"]);
