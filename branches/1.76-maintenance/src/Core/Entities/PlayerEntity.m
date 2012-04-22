@@ -7515,7 +7515,7 @@ static NSString *last_outfitting_key=nil;
 - (BOOL) hasOneEquipmentItem:(NSString *)itemKey includeMissiles:(BOOL)includeMissiles
 {
 	// Check basic equipment the normal way.
-	if ([super hasOneEquipmentItem:itemKey includeMissiles:NO])  return YES;
+	if ([super hasOneEquipmentItem:itemKey includeMissiles:NO whileLoading:NO])  return YES;
 	
 	// Custom handling for player missiles.
 	if (includeMissiles)
@@ -8048,7 +8048,7 @@ static NSString *last_outfitting_key=nil;
 		
 		if ((potential_target)&&(potential_target->isShip))
 		{
-			if (potential_target->zero_distance < SCANNER_MAX_RANGE2)
+			if (potential_target->zero_distance < SCANNER_MAX_RANGE2 && (![potential_target isCloaked]))
 			{
 				[super addTarget:potential_target];
 				if (missile_status != MISSILE_STATUS_SAFE)
