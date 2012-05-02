@@ -1639,6 +1639,10 @@ static OOTextureSprite *NewTextureSpriteWithDescriptor(NSDictionary *descriptor)
 		int destNumber = [UNIVERSE findSystemNumberAtCoords:cursor_coordinates withGalaxySeed:galaxy_seed];
 		NSDictionary* routeInfo = [UNIVERSE routeFromSystem:planetNumber toSystem:destNumber optimizedBy:advancedNavArrayMode];
 		
+		// if the ANA has been activated and we are in string input mode (i.e. planet search),
+		// get out of it so that distance and time data can be displayed
+		if ([[[UNIVERSE gameView] typedString] length] > 0)  [player clearPlanetSearchString];
+		
 		if (!routeInfo)  routeExists = NO;
 		
 		[self drawAdvancedNavArrayAtX:x y:y z:z alpha:alpha usingRoute: (planetNumber != destNumber ? (id)routeInfo : nil) optimizedBy:advancedNavArrayMode];
