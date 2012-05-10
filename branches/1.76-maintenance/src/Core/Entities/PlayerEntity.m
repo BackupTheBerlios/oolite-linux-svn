@@ -2219,6 +2219,7 @@ static bool minShieldLevelPercentageInitialised = false;
 		if (![self scoopOverride])
 		{
 			scoopsActive = NO;
+			[self updateFuelScoopSoundWithInterval:delta_t];
 		}
 	}
 }
