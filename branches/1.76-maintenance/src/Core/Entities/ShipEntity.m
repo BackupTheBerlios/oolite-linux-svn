@@ -80,6 +80,7 @@ MA 02110-1301, USA.
 #import "GuiDisplayGen.h"
 #import "HeadUpDisplay.h"
 #import "OOEntityFilterPredicate.h"
+#import "OOShipRegistry.h"
 #import "OOEquipmentType.h"
 
 #import "OODebugGLDrawing.h"
@@ -2490,6 +2491,14 @@ ShipEntity* doOctreesCollide(ShipEntity* prime, ShipEntity* other)
 	if ([self isPlayer])
 	{
 		if (![eqType isAvailableToPlayer])  return NO;
+		if (![eqType isAvailableToAll])  
+		{
+			// find options that agree with this ship. Only player ships have these options.
+			OOShipRegistry		*registry = [OOShipRegistry sharedRegistry];
+			NSDictionary		*shipyardInfo = [registry shipyardInfoForKey:[self shipDataKey]];
+			NSMutableSet		*options = [NSMutableSet setWithArray:[shipyardInfo oo_arrayForKey:KEY_OPTIONAL_EQUIPMENT]];
+			if (![options containsObject:equipmentKey])  return NO;
+		}
 	}
 	else
 	{
