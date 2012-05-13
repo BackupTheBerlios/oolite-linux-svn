@@ -48,7 +48,7 @@ MA 02110-1301, USA.
 
 static void LoadSystemSpecificBundles(void);
 static void SetUpSparkle(void);
-#elif OOLITE_GNUSTEP
+#elif (OOLITE_GNUSTEP && !defined(NDEBUG))
 #import "OODebugMonitor.h"
 #endif
 
@@ -1237,7 +1237,7 @@ static NSMutableArray *sMessageStack;
 - (void) exitAppWithContext:(NSString *)context
 {
 	OOLog(@"exit.context", @"Exiting: %@.", context);
-#if OOLITE_GNUSTEP
+#if (OOLITE_GNUSTEP && !defined(NDEBUG))
 	[[OODebugMonitor sharedDebugMonitor] applicationWillTerminate];
 #endif
 	[[NSUserDefaults standardUserDefaults] synchronize];
