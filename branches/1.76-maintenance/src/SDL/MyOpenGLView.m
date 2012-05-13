@@ -105,6 +105,9 @@ MA 02110-1301, USA.
 #else
 		// Changing the flags can trigger texture bugs.
 		surface = SDL_SetVideoMode(8, 8, 32, videoModeFlags);
+		if (!surface) {
+			return;
+		}
 #endif
 	}
 	else
@@ -114,6 +117,10 @@ MA 02110-1301, USA.
 #endif
 		surface = SDL_SetVideoMode(firstScreen.width, firstScreen.height, 32, videoModeFlags);
 		// blank the surface / go to fullscreen
+		if (!surface) {
+			return;
+		}
+
 		[self initialiseGLWithSize: firstScreen];
 	}
 }
