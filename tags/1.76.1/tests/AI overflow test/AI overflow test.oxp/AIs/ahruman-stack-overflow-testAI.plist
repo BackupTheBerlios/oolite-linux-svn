@@ -1,6 +1,0 @@
-{
-	GLOBAL =
-	{
-		ENTER = ("setAITo: ahruman-stack-overflow-testAI.plist");
-	};
-}
