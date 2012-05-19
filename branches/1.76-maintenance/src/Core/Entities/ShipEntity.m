@@ -2491,6 +2491,8 @@ ShipEntity* doOctreesCollide(ShipEntity* prime, ShipEntity* other)
 	if ([self isPlayer])
 	{
 		if (![eqType isAvailableToPlayer])  return NO;
+		/*
+		// This should also include extra equipment, not only options.
 		if (![eqType isAvailableToAll])  
 		{
 			// find options that agree with this ship. Only player ships have these options.
@@ -2499,6 +2501,7 @@ ShipEntity* doOctreesCollide(ShipEntity* prime, ShipEntity* other)
 			NSMutableSet		*options = [NSMutableSet setWithArray:[shipyardInfo oo_arrayForKey:KEY_OPTIONAL_EQUIPMENT]];
 			if (![options containsObject:equipmentKey])  return NO;
 		}
+		*/
 	}
 	else
 	{
