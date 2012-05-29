@@ -1,0 +1,6 @@
+OOPlanetEntity.
+	* add setAtmosphereTextureFileName ala existing setTextureFileName
+	* when setting material from texture filename, consult planetinfo->materials and shaders dictionaries for a shader/material of that name.
+	* add accessors to OOPlanetEntity 'planetRadius' ,'atmosphereRadius' 
+
+whitelist 'planetRadius' and 'atmosphereRadius' as entity uniform bindings.
