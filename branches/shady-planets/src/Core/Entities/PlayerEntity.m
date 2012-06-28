@@ -125,7 +125,6 @@ static GLfloat		sBaseMass = 0.0;
 - (void) updateTargeting;
 - (BOOL) isValidTarget:(Entity*)target;
 - (void) showGameOver;
-- (void) addScannedWormhole:(WormholeEntity*)wormhole;
 - (void) updateWormholes;
 
 // Shopping
@@ -456,6 +455,12 @@ static GLfloat		sBaseMass = 0.0;
 }
 
 
+- (void) setRandom_factor:(int)rf
+{
+	market_rnd = rf;
+}
+
+
 - (Random_Seed) galaxy_seed
 {
 	return galaxy_seed;
@@ -465,6 +470,13 @@ static GLfloat		sBaseMass = 0.0;
 - (NSPoint) galaxy_coordinates
 {
 	return galaxy_coordinates;
+}
+
+
+- (void) setGalaxyCoordinates:(NSPoint)newPosition
+{
+	galaxy_coordinates.x = newPosition.x;
+	galaxy_coordinates.y = newPosition.y;
 }
 
 
@@ -502,8 +514,23 @@ static GLfloat		sBaseMass = 0.0;
 
 - (WormholeEntity *) wormhole
 {
-    return wormhole;
+	return wormhole;
 }
+
+
+- (void) setWormhole:(WormholeEntity*)newWormhole
+{
+	[wormhole release];
+	if (newWormhole != nil)
+	{
+		wormhole = [newWormhole retain];
+	}
+	else
+	{
+		wormhole = nil;
+	}
+}
+
 
 - (NSDictionary *) commanderDataDictionary
 {
@@ -2798,6 +2825,13 @@ static GLfloat		sBaseMass = 0.0;
 }
 
 
+- (void) applyAttitudeChanges:(double) delta_t
+{
+	[self applyRoll:flightRoll*delta_t andClimb:flightPitch*delta_t];
+	[self applyYaw:flightYaw*delta_t];
+}
+
+
 - (void) applyRoll:(GLfloat) roll1 andClimb:(GLfloat) climb1
 {
 	if (roll1 == 0.0 && climb1 == 0.0 && hasRotated == NO)
@@ -3985,34 +4019,28 @@ static GLfloat		sBaseMass = 0.0;
 	{
 		case WEAPON_PLASMA_CANNON :
 			weapon_energy_use =			6.0f;
-			weapon_shot_temperature =	8.0f;
 			weapon_reload_time =		0.25f;
 			break;
 		case WEAPON_PULSE_LASER :
 			weapon_energy_use =			0.8f;
-			weapon_shot_temperature =	7.0f;
 			weapon_reload_time =		0.5f;
 			break;
 		case WEAPON_BEAM_LASER :
 			weapon_energy_use =			1.0f;
-			weapon_shot_temperature =	8.0f;
 			weapon_reload_time =		0.1f;
 			break;
 		case WEAPON_MINING_LASER :
 			weapon_energy_use =			1.4f;
-			weapon_shot_temperature =	10.0f;
 			weapon_reload_time =		2.5f;
 			break;
 		case WEAPON_THARGOID_LASER :
 		case WEAPON_MILITARY_LASER :
 			weapon_energy_use =			1.2f;
-			weapon_shot_temperature =	8.0f;
 			weapon_reload_time =		0.1f;
 			break;
 		case WEAPON_NONE:
 		case WEAPON_UNDEFINED:
 			weapon_energy_use =			0.0f;
-			weapon_shot_temperature =	0.0f;
 			weapon_reload_time =		0.1f;
 			break;
 	}
@@ -4040,7 +4068,7 @@ static GLfloat		sBaseMass = 0.0;
 		return NO;
 	}
 	
-	if (weapon_temp / PLAYER_MAX_WEAPON_TEMP >= 0.85)
+	if (weapon_temp / PLAYER_MAX_WEAPON_TEMP >= WEAPON_COOLING_CUTOUT)
 	{
 		[self playWeaponOverheated];
 		[UNIVERSE addMessage:DESC(@"weapon-overheat") forCount:3.0];
@@ -5358,7 +5386,7 @@ static GLfloat		sBaseMass = 0.0;
 	Vector		pos = [UNIVERSE getWitchspaceExitPosition];		// no need to reset the PRNG
 	Quaternion	q1;
 	Vector		whpos, exitpos;
-
+	
 	quaternion_set_random(&q1);
 	if (abs((int)d1) < MIN_DISTANCE_TO_BUOY)	
 	{
@@ -5373,40 +5401,52 @@ static GLfloat		sBaseMass = 0.0;
 	// the more common case of the player following other ships, the player tends to
 	// ram the back of the ships, or even jump on top of is when the ship jumped without initial speed, which is messy. 
 	// To avoid this problem, a small wormhole displacement is added.
-	if (0 && [[wormhole shipsInTransit] count] > 0) // **** Currently disabled. Activate for 1.76?
+	if (wormhole)	// will be nil for galactic jump
 	{
-		// player is not allone in his wormhole, synchronise player and wormhole position.
-		double	wh_arrival_time = ([PLAYER clockTimeAdjusted] - [wormhole arrivalTime]);
-		Vector distance;
-		if (wh_arrival_time > 0)
+		if ([[wormhole shipsInTransit] count] > 0)
 		{
-			// Player is following other ship 
-			whpos = vector_add(exitpos, vector_multiply_scalar([self forwardVector], 1000.0f));
+			// player is not allone in his wormhole, synchronise player and wormhole position.
+			double	wh_arrival_time = ([PLAYER clockTimeAdjusted] - [wormhole arrivalTime]);
+			if (wh_arrival_time > 0)
+			{
+				// Player is following other ship 
+				whpos = vector_add(exitpos, vector_multiply_scalar([self forwardVector], 1000.0f));
+				[wormhole setContainsPlayer:YES];
+			}
+			else
+			{
+				// Player is the leadship 
+				whpos = vector_add(exitpos, vector_multiply_scalar([self forwardVector], -500.0f));
+				// so it won't contain the player by the time they exit
+				[wormhole setExitSpeed:maxFlightSpeed*WORMHOLE_LEADER_SPEED_FACTOR];
+			} 
+
+			Vector distance = vector_subtract(whpos, pos);
+			if (magnitude2(distance) < MIN_DISTANCE_TO_BUOY2 ) // within safety distance from the buoy?
+			{
+				// the wormhole is to close to the buoy. Move both player and wormhole away from it in the x-y plane.
+				distance.z = 0;
+				distance = vector_multiply_scalar(vector_normal(distance), MIN_DISTANCE_TO_BUOY);
+				whpos = vector_add(whpos, distance);
+				position = vector_add(position, distance);
+			}
+			[wormhole setExitPosition: whpos];
 		}
 		else
 		{
-			// Player is the leadship 
-			whpos = vector_add(exitpos, vector_multiply_scalar([self forwardVector], -500.0f));
-			
+			// no-one else in the wormhole
+			[wormhole setExitSpeed:maxFlightSpeed*WORMHOLE_LEADER_SPEED_FACTOR];
 		}
-		distance = vector_subtract(whpos, pos);
-		if (magnitude2(distance) < MIN_DISTANCE_TO_BUOY2 ) // within safety distance from the buoy?
-		{
-			// the wormhole is to close to the buoy. Move both player and wormhole away from it in the x-y plane.
-			distance.z = 0;
-			distance = vector_multiply_scalar(vector_normal(distance), MIN_DISTANCE_TO_BUOY);
-			whpos = vector_add(whpos, distance);
-			position = vector_add(position, distance);
-		}
-		[wormhole setExitPosition: whpos];
 	}
-	[wormhole release];
+
+	flightSpeed = wormhole ? [wormhole exitSpeed] : fmin(maxFlightSpeed,50.0f);
+	[wormhole release];	// OK even if nil
 	wormhole = nil;
 
 	flightRoll = 0.0f;
 	flightPitch = 0.0f;
 	flightYaw = 0.0f;
-	flightSpeed = maxFlightSpeed * 0.25f;
+
 	velocity = kZeroVector;
 	[self setStatus:STATUS_EXITING_WITCHSPACE];
 	gui_screen = GUI_SCREEN_MAIN;
@@ -7955,9 +7995,9 @@ static NSString *last_outfitting_key=nil;
 
 - (double) renovationCosts
 {
-	// 4% of value of ships wear + correction for missing subentities.
+	// 5% of value of ships wear + correction for missing subentities.
 	OOCreditsQuantity shipValue = [UNIVERSE tradeInValueForCommanderDictionary:[self commanderDataDictionary]];
-	double costs = 0.004 * (100 - ship_trade_in_factor) * shipValue;
+	double costs = 0.005 * (100 - ship_trade_in_factor) * shipValue;
 	costs += 0.01 * shipValue * [self missingSubEntitiesAdjustment];
 	return cunningFee(costs, 0.05);
 }

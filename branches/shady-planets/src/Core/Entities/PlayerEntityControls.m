@@ -2841,6 +2841,12 @@ static NSTimeInterval	time_last_frame;
 	double pitch_dampner = PITCH_DAMPING_FACTOR * delta_t;
 	double yaw_dampner = YAW_DAMPING_FACTOR * delta_t;
 	
+	BOOL	isCtrlDown = [gameView isCtrlDown];
+	
+	double	flightArrowKeyPrecisionFactor = [[NSUserDefaults standardUserDefaults] oo_doubleForKey:@"flight-arrow-key-precision-factor" defaultValue:0.5];
+	if (flightArrowKeyPrecisionFactor < 0.05)  flightArrowKeyPrecisionFactor = 0.05;
+	if (flightArrowKeyPrecisionFactor > 1.0)  flightArrowKeyPrecisionFactor = 1.0; 
+	
 	rolling = NO;
 	// if we have yaw on the mouse x-axis, then allow using the keyboard roll keys
 	if (!mouse_control_on || (mouse_control_on && mouse_x_axis_map_to_yaw))
@@ -2849,20 +2855,20 @@ static NSTimeInterval	time_last_frame;
 		{
 			keyboardRollOverride=YES;
 			if (flightRoll > 0.0)  flightRoll = 0.0;
-			[self decrease_flight_roll:delta_t*roll_delta];
+			[self decrease_flight_roll:isCtrlDown ? flightArrowKeyPrecisionFactor*roll_dampner*roll_delta : delta_t*roll_delta];
 			rolling = YES;
 		}
 		if ([gameView isDown:key_roll_right])
 		{
 			keyboardRollOverride=YES;
 			if (flightRoll < 0.0)  flightRoll = 0.0;
-			[self increase_flight_roll:delta_t*roll_delta];
+			[self increase_flight_roll:isCtrlDown ? flightArrowKeyPrecisionFactor*roll_dampner*roll_delta : delta_t*roll_delta];
 			rolling = YES;
 		}
 	}
 	if(((mouse_control_on && !mouse_x_axis_map_to_yaw) || numSticks) && !keyboardRollOverride)
 	{
-		double stick_roll = max_flight_roll * virtualStick.x;
+		stick_roll = max_flight_roll * virtualStick.x;
 		if (flightRoll < stick_roll)
 		{
 			[self increase_flight_roll:delta_t*roll_delta];
@@ -2899,20 +2905,20 @@ static NSTimeInterval	time_last_frame;
 		{
 			keyboardPitchOverride=YES;
 			if (flightPitch < 0.0)  flightPitch = 0.0;
-			[self increase_flight_pitch:delta_t*pitch_delta];
+			[self increase_flight_pitch:isCtrlDown ? flightArrowKeyPrecisionFactor*pitch_dampner*pitch_delta : delta_t*pitch_delta];
 			pitching = YES;
 		}
 		if ([gameView isDown:key_pitch_forward])
 		{
 			keyboardPitchOverride=YES;
 			if (flightPitch > 0.0)  flightPitch = 0.0;
-			[self decrease_flight_pitch:delta_t*pitch_delta];
+			[self decrease_flight_pitch:isCtrlDown ? flightArrowKeyPrecisionFactor*pitch_dampner*pitch_delta : delta_t*pitch_delta];
 			pitching = YES;
 		}
 	}
 	if(mouse_control_on || (numSticks && !keyboardPitchOverride))
 	{
-		double stick_pitch = max_flight_pitch * virtualStick.y;
+		stick_pitch = max_flight_pitch * virtualStick.y;
 		if (flightPitch < stick_pitch)
 		{
 			[self increase_flight_pitch:delta_t*pitch_delta];
@@ -2951,14 +2957,14 @@ static NSTimeInterval	time_last_frame;
 			{
 				keyboardYawOverride=YES;
 				if (flightYaw < 0.0)  flightYaw = 0.0;
-				[self increase_flight_yaw:delta_t*yaw_delta];
+				[self increase_flight_yaw:isCtrlDown ? flightArrowKeyPrecisionFactor*yaw_dampner*yaw_delta : delta_t*yaw_delta];
 				yawing = YES;
 			}
 			else if ([gameView isDown:key_yaw_right])
 			{
 				keyboardYawOverride=YES;
 				if (flightYaw > 0.0)  flightYaw = 0.0;
-				[self decrease_flight_yaw:delta_t*yaw_delta];
+				[self decrease_flight_yaw:isCtrlDown ? flightArrowKeyPrecisionFactor*yaw_dampner*yaw_delta : delta_t*yaw_delta];
 				yawing = YES;
 			}
 		}
@@ -2966,7 +2972,7 @@ static NSTimeInterval	time_last_frame;
 		{
 			// I think yaw is handled backwards in the code,
 			// which is why the negative sign is here.
-			double stick_yaw = max_flight_yaw * (-reqYaw);
+			stick_yaw = max_flight_yaw * (-reqYaw);
 			if (flightYaw < stick_yaw)
 			{
 				[self increase_flight_yaw:delta_t*yaw_delta];

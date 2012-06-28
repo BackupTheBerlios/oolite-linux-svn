@@ -61,6 +61,7 @@ OOJSScript, OORoleSet, OOShipGroup, OOEquipmentType;
 #define MILITARY_JAMMER_MIN_ENERGY		128
 
 #define COMBAT_IN_RANGE_FACTOR			0.035f
+#define COMBAT_BROADSIDE_IN_RANGE_FACTOR			0.020f
 #define COMBAT_OUT_RANGE_FACTOR			0.500f
 #define COMBAT_BROADSIDE_RANGE_FACTOR			0.900f
 #define COMBAT_WEAPON_RANGE_FACTOR		1.200f
@@ -114,6 +115,26 @@ OOJSScript, OORoleSet, OOShipGroup, OOEquipmentType;
 #define WEAPON_FACING_AFT				2
 #define WEAPON_FACING_PORT				4
 #define WEAPON_FACING_STARBOARD			8
+
+#define WEAPON_COOLING_FACTOR			6.0f
+#define NPC_MAX_WEAPON_TEMP				256.0f
+#define WEAPON_COOLING_CUTOUT     0.85f
+
+#define COMBAT_AI_WEAPON_TEMP_READY  0.25f * NPC_MAX_WEAPON_TEMP
+#define COMBAT_AI_WEAPON_TEMP_USABLE  WEAPON_COOLING_CUTOUT * NPC_MAX_WEAPON_TEMP
+#define COMBAT_AI_ISNT_AWFUL  0.0f
+// removes BEHAVIOUR_ATTACK_FLY_TO_TARGET_SIX/TWELVE (unless thargoid)
+#define COMBAT_AI_IS_SMART  5.0f
+// adds BEHAVIOUR_(FLEE_)EVASIVE_ACTION
+#define COMBAT_AI_FLEES_BETTER 6.0f
+// adds BEHAVIOUR_ATTACK_BREAK_OFF_TARGET
+#define COMBAT_AI_DOGFIGHTER 6.5f
+// adds BEHAVIOUR_ATTACK_SLOW_DOGFIGHT
+#define COMBAT_AI_TRACKS_CLOSER 7.5f
+#define COMBAT_AI_USES_SNIPING 8.5f
+// adds BEHAVIOUR_ATTACK_SNIPER
+#define COMBAT_AI_FLEES_BETTER_2 9.0f
+
 
 #define MAX_LANDING_SPEED				50.0
 #define MAX_LANDING_SPEED2				(MAX_LANDING_SPEED * MAX_LANDING_SPEED)
@@ -189,6 +210,10 @@ typedef enum
 	OOUniversalID			primaryTarget;				// for combat or rendezvous
 	GLfloat					desired_range;				// range to which to journey/scan
 	GLfloat					desired_speed;				// speed at which to travel
+// next three used to set desired attitude, flightRoll etc. gradually catch up to target
+	GLfloat         stick_roll;           // stick roll
+	GLfloat         stick_pitch;          // stick pitch
+	GLfloat         stick_yaw;            // stick yaw
 	OOBehaviour				behaviour;					// ship's behavioural state
 	
 	BoundingBox				totalBoundingBox;			// records ship configuration
@@ -280,6 +305,9 @@ _lightsActive: 1;
 	GLfloat					weapon_damage_override;		// custom energy damage dealt by front laser, if applicable
 	GLfloat					weaponRange;				// range of the weapon (in meters)
 	
+	GLfloat					weapon_temp, weapon_shot_temperature; // active weapon temp, delta-temp
+	GLfloat					forward_weapon_temp, aft_weapon_temp, port_weapon_temp, starboard_weapon_temp; // current weapon temperatures
+
 	GLfloat					scannerRange;				// typically 25600
 	
 	unsigned				missiles;					// number of on-board missiles
@@ -340,6 +368,7 @@ _lightsActive: 1;
 	
 	float					accuracy;
 	float					pitch_tolerance;
+	float					aim_tolerance;
 	
 	OOAegisStatus			aegis_status;				// set to YES when within the station's protective zone
 	
@@ -443,6 +472,9 @@ _lightsActive: 1;
 - (OOBrain *)brain;
 - (void)setBrain:(OOBrain*) aBrain;
 #endif
+
+- (GLfloat)accuracy;
+- (void)setAccuracy:(GLfloat) new_accuracy;
 
 - (OOMesh *)mesh;
 - (void)setMesh:(OOMesh *)mesh;
@@ -594,6 +626,9 @@ _lightsActive: 1;
 - (void) behaviour_track_target:(double) delta_t;
 - (void) behaviour_intercept_target:(double) delta_t;
 - (void) behaviour_attack_target:(double) delta_t;
+- (void) behaviour_attack_slow_dogfight:(double) delta_t;
+- (void) behaviour_evasive_action:(double) delta_t;
+- (void) behaviour_attack_break_off_target:(double) delta_t;
 - (void) behaviour_fly_to_target_six:(double) delta_t;
 - (void) behaviour_attack_mining_target:(double) delta_t;
 - (void) behaviour_attack_fly_to_target:(double) delta_t;
@@ -605,6 +640,7 @@ _lightsActive: 1;
 - (void) behaviour_attack_broadside_right:(double) delta_t;
 - (void) behaviour_close_to_broadside_range:(double) delta_t;
 - (void) behaviour_attack_broadside_target:(double) delta_t leftside:(BOOL)leftside;
+- (void) behaviour_attack_sniper:(double) delta_t;
 - (void) behaviour_fly_range_from_destination:(double) delta_t;
 - (void) behaviour_face_destination:(double) delta_t;
 - (void) behaviour_land_on_planet:(double) delta_t;
@@ -629,6 +665,7 @@ _lightsActive: 1;
 - (BOOL) isJammingScanning;
 
 - (void) applyThrust:(double) delta_t;
+- (void) applyAttitudeChanges:(double) delta_t;
 
 - (void) avoidCollision;
 - (void) resumePostProximityAlert;
@@ -690,11 +727,12 @@ _lightsActive: 1;
 - (BOOL) isHostileTo:(Entity *)entity;
 
 // defense target handling
-- (NSMutableArray*) getDefenseTargets;
-- (BOOL) addDefenseTarget:(OOUniversalID)target;
-- (BOOL) isDefenseTarget:(OOUniversalID)target;
+- (unsigned) numDefenseTargets;
+- (Entity*) getDefenseTarget:(int)index;
+- (BOOL) addDefenseTarget:(Entity*)target;
+- (BOOL) isDefenseTarget:(Entity*)target;
 - (void) removeDefenseTarget:(unsigned)index;
-- (void) removeDefenseTargetByID:(OOUniversalID)target;
+- (void) removeDefenseTargetByID:(Entity*)target;
 - (void) clearDefenseTargets;
 
 
@@ -734,6 +772,8 @@ _lightsActive: 1;
 - (void) setRoll:(double) amount;
 - (void) setPitch:(double) amount;
 - (void) setThrust:(double) amount;
+- (void) applySticks:(double)delta_t;
+
 
 - (void)setThrustForDemo:(float)factor;
 
@@ -748,6 +788,7 @@ _lightsActive: 1;
 
 - (int) legalStatus;
 
+- (void) setUpCargoType:(NSString *) cargoString;
 - (void) setCommodity:(OOCommodityType)co_type andAmount:(OOCargoQuantity)co_amount;
 - (void) setCommodityForPod:(OOCommodityType)co_type andAmount:(OOCargoQuantity)co_amount;
 - (OOCommodityType) commodityType;
@@ -832,6 +873,7 @@ Vector positionOffsetForShipInRotationToAlignment(ShipEntity* ship, Quaternion q
 
 - (NSComparisonResult) compareBeaconCodeWith:(ShipEntity *)other;
 
+- (GLfloat)weaponRecoveryTime;
 - (GLfloat)laserHeatLevel;
 - (GLfloat)hullHeatLevel;
 - (GLfloat)entityPersonality;
@@ -887,12 +929,15 @@ Vector positionOffsetForShipInRotationToAlignment(ShipEntity* ship, Quaternion q
 - (Vector) distance_six: (GLfloat) dist;
 - (Vector) distance_twelve: (GLfloat) dist withOffset:(GLfloat)offset;
 
+- (void) setEvasiveJink:(GLfloat) z;
+- (void) evasiveAction:(double) delta_t;
 - (double) trackPrimaryTarget:(double) delta_t :(BOOL) retreat;
 - (double) trackSideTarget:(double) delta_t :(BOOL) leftside;
 - (double) missileTrackPrimaryTarget:(double) delta_t;
 
 //return 0.0 if there is no primary target
 - (double) rangeToPrimaryTarget;
+- (double) approachAspectToPrimaryTarget;
 - (double) rangeToSecondaryTarget:(Entity *)target;
 - (BOOL) onTarget:(OOViewID) direction withWeapon:(OOWeaponType)weapon;
 
@@ -912,12 +957,14 @@ Vector positionOffsetForShipInRotationToAlignment(ShipEntity* ship, Quaternion q
 - (BOOL) fireDirectLaserShotAt:(Entity*)my_target;
 - (BOOL) fireLaserShotInDirection:(OOViewID)direction;
 - (BOOL) firePlasmaShotAtOffset:(double)offset speed:(double)speed color:(OOColor *)color;
+- (void) considerFiringMissile:(double)delta_t;
 - (ShipEntity *) fireMissile;
 - (ShipEntity *) fireMissileWithIdentifier:(NSString *) identifier andTarget:(Entity *) target;
 - (BOOL) isMissileFlagSet;
 - (void) setIsMissileFlag:(BOOL)newValue;
 - (OOTimeDelta) missileLoadTime;
 - (void) setMissileLoadTime:(OOTimeDelta)newMissileLoadTime;
+- (void) noticeECM;
 - (BOOL) fireECM;
 - (BOOL) cascadeIfAppropriateWithDamageAmount:(double)amount cascadeOwner:(Entity *)owner;
 - (BOOL) activateCloakingDevice;
@@ -1075,6 +1122,7 @@ uintN argc = sizeof argv / sizeof *argv; \
 
 NSDictionary *OODefaultShipShaderMacros(void);
 
+GLfloat getWeaponRangeFromType(OOWeaponType weapon_type);
 
 // Stuff implemented in OOConstToString.m
 enum

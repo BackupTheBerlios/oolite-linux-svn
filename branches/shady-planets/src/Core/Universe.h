@@ -42,7 +42,7 @@ MA 02110-1301, USA.
 
 @class	GameController, CollisionRegion, MyOpenGLView, GuiDisplayGen,
 		Entity, ShipEntity, StationEntity, OOPlanetEntity, OOSunEntity,
-		PlayerEntity, OORoleSet;
+	PlayerEntity, OORoleSet, WormholeEntity;
 
 
 typedef BOOL (*EntityFilterPredicate)(Entity *entity, void *parameter);
@@ -339,10 +339,12 @@ typedef uint8_t		OOEconomyID;		// 0..7
 - (void) pauseGame;
 - (BOOL) isGamePaused;
 
+- (void) carryPlayerOn:(StationEntity*)carrier inWormhole:(WormholeEntity*)wormhole;
 - (void) setUpUniverseFromStation;
 - (void) setUpUniverseFromWitchspace;
 - (void) setUpUniverseFromMisjump;
 - (void) setUpWitchspace;
+- (void) setUpWitchspaceBetweenSystem:(Random_Seed)s1 andSystem:(Random_Seed)s2;
 - (void) setUpSpace;
 - (void) setLighting;
 - (void) forceLightSwitch;

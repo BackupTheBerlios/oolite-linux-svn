@@ -302,7 +302,7 @@
 		ShipEntity *thing = scanned_ships[i];
 		GLfloat d2 = distance2_scanned_ships[i];
 		if ((d2 < found_d2) 
-			&& ([thing isThargoid] || (([thing primaryTarget] == self) && [thing hasHostileTarget]) || [thing isDefenseTarget:[self universalID]])
+			&& ([thing isThargoid] || (([thing primaryTarget] == self) && [thing hasHostileTarget]) || [thing isDefenseTarget:self])
 			&& ![thing isCloaked])
 		{
 			found_target = [thing universalID];
@@ -317,8 +317,8 @@
 
 - (void) performTumble
 {
-	flightRoll = max_flight_roll*2.0*(randf() - 0.5);
-	flightPitch = max_flight_pitch*2.0*(randf() - 0.5);
+	stick_roll = max_flight_roll*2.0*(randf() - 0.5);
+	stick_pitch = max_flight_pitch*2.0*(randf() - 0.5);
 	behaviour = BEHAVIOUR_TUMBLE;
 	frustration = 0.0;
 }
@@ -484,18 +484,11 @@
 	// a more considered approach here:
 	// if we're already busy attacking a target we don't necessarily want to break off
 	//
-	switch (behaviour)
+	if ([self hasHostileTarget] && randf() < 0.75)	// if I'm attacking, ignore 75% of new aggressor's attacks
 	{
-		case BEHAVIOUR_ATTACK_FLY_FROM_TARGET:
-		case BEHAVIOUR_ATTACK_FLY_TO_TARGET:
-			if (randf() < 0.75)	// if I'm attacking, ignore 75% of new aggressor's attacks
 				// but add them as a secondary target anyway
-				[self addDefenseTarget:primaryAggressor];
-			return;
-			break;
-			
-		default:
-			break;
+		[self addDefenseTarget:(ShipEntity*)primeAggressor];
+		return;
 	}
 	
 	// react only if the primary aggressor is not a friendly ship, else ignore it
@@ -521,12 +514,12 @@
 	Entity *primeAggressor = [UNIVERSE entityForUniversalID:primaryAggressor];
 	if (!primeAggressor)
 		return;
-	if ([self isDefenseTarget:primaryAggressor])
+	if ([self isDefenseTarget:primeAggressor])
 		return;
 	
-	if ([primeAggressor isShip] && ![(ShipEntity *)primeAggressor isFriendlyTo:self])
+	if ([primeAggressor isShip] && ![(ShipEntity*)primeAggressor isFriendlyTo:self])
 	{
-		[self addDefenseTarget:primaryAggressor];
+		[self addDefenseTarget:primeAggressor];
 	}
 }
 
@@ -720,7 +713,7 @@
 	{
 		if ([fTarget isShip] && ![(ShipEntity *)fTarget isFriendlyTo:self])
 		{
-			[self addDefenseTarget:found_target];
+			[self addDefenseTarget:fTarget];
 		}
 	}
 }
@@ -759,15 +752,9 @@
 - (void) performFlee
 {
 	behaviour = BEHAVIOUR_FLEE_TARGET;
-//	double agility = ([self universalID] & 3) * 5; // make some ships more fanatic in avoiding the line of fire.
-//	if (scanClass == CLASS_MILITARY) agility += 5;  // military pilots have a better average skill. 
-	// may as well use existing accuracy variable
-	if (accuracy > 0)
-	{
-		jink.x = ((ranrot_rand() % 256) - 128.0) * accuracy;
-		jink.y = ((ranrot_rand() % 256) - 128.0) * accuracy;
-		jink.z = 400.0; // just within the 500 meter boundary were jink changes.
-	}
+
+	[self setEvasiveJink:400.0];
+
 	frustration = 0.0;
 }
 
@@ -861,7 +848,7 @@
 	if (missile == nil)  return;
 	
 	[self addTarget:missile];
-	[self addDefenseTarget:[missile universalID]];
+	[self addDefenseTarget:missile];
 	
 	// Notify own ship script that we are being attacked.	
 	ShipEntity *hunter = [missile owner];
@@ -1160,9 +1147,9 @@
 		ShipEntity *ship = scanned_ships[i];
 		if (([ship primaryTarget] == self && [ship hasHostileTarget]) || [ship isMine] || ([ship isThargoid] != [self isThargoid]))
 		{
-			if (![self isDefenseTarget:[ship universalID]])
+			if (![self isDefenseTarget:ship])
 			{
-				[self addDefenseTarget:[ship universalID]];
+				[self addDefenseTarget:ship];
 				return;
 			}
 		}
@@ -1475,9 +1462,9 @@
 		{
 			[other removeTarget:self];
 		}
-		if ([other isDefenseTarget:[self universalID]])
+		if ([other isDefenseTarget:self])
 		{
-			[other removeDefenseTargetByID:[self universalID]];
+			[other removeDefenseTargetByID:self];
 		}
 	}
 	// now we're just a bunch of alien artefacts!
@@ -1499,7 +1486,7 @@
 
 - (void) fightOrFleeHostiles
 {
-	[self addDefenseTarget:found_target];
+	[self addDefenseTarget:[UNIVERSE entityForUniversalID:found_target]];
 	
 	if ([self hasEscorts])
 	{
@@ -2005,8 +1992,17 @@
 
 - (void) performMining
 {
-	behaviour = BEHAVIOUR_ATTACK_MINING_TARGET;
-	frustration = 0.0;
+	Entity *target = [self primaryTarget];
+	// mining is not seen as hostile behaviour, so ensure it is only used against rocks.
+	if (target &&  [target scanClass] == CLASS_ROCK)
+	{
+		behaviour = BEHAVIOUR_ATTACK_MINING_TARGET;
+		frustration = 0.0;
+	}
+	else
+	{	
+		[self noteLostTargetAndGoIdle];
+	}
 }
 
 
@@ -2444,7 +2440,7 @@
 		else if ([targEnt isPlayer])
 			whole = [PLAYER wormhole];
 	}
-	
+
 	if (!whole)
 	{
 		// locate nearest wormhole

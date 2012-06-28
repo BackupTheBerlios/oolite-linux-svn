@@ -180,7 +180,6 @@ typedef enum
 } OOMissileStatus;
 
 
-#define WEAPON_COOLING_FACTOR			6.0f
 #define ENERGY_RECHARGE_FACTOR			energy_recharge_rate
 #define ECM_ENERGY_DRAIN_FACTOR			20.0f
 #define ECM_DURATION					2.5f
@@ -324,10 +323,8 @@ typedef enum
 	GLfloat					launchRoll;
 	
 	GLfloat					forward_shield, aft_shield;
-	GLfloat					weapon_temp;
-	GLfloat					forward_weapon_temp, aft_weapon_temp, port_weapon_temp, starboard_weapon_temp;
 	OOTimeDelta				forward_shot_time, aft_shot_time, port_shot_time, starboard_shot_time;
-	GLfloat					weapon_energy_use, weapon_shot_temperature, weapon_reload_time;
+	GLfloat					weapon_energy_use, weapon_reload_time;
 	
 	int						chosen_weapon_facing;   // for purchasing weapons
 	
@@ -572,8 +569,10 @@ typedef enum
 - (OOCreditsQuantity) deciCredits;
 
 - (int) random_factor;
+- (void) setRandom_factor:(int)rf;
 - (Random_Seed) galaxy_seed;
 - (NSPoint) galaxy_coordinates;
+- (void) setGalaxyCoordinates:(NSPoint)newPosition;
 - (NSPoint) cursor_coordinates;
 
 - (Random_Seed) system_seed;
@@ -845,6 +844,8 @@ typedef enum
 - (NSArray *) scannedWormholes;
 
 - (WormholeEntity *) wormhole;
+- (void) setWormhole:(WormholeEntity *)newWormhole;
+- (void) addScannedWormhole:(WormholeEntity*)wormhole;
 
 @end
 

@@ -537,6 +537,62 @@ GLfloat docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEVEL, DOC
 }
 
 
+- (void) carryPlayerOn:(StationEntity*)carrier inWormhole:(WormholeEntity*)wormhole
+{
+		PlayerEntity	*player = PLAYER;
+		Random_Seed dest = [wormhole destination];
+
+		[player setWormhole:wormhole];
+		[player addScannedWormhole:wormhole];
+
+		ShipScriptEventNoCx(player, "shipWillEnterWitchspace", OOJSSTR("carried"));
+		
+		[self allShipsDoScriptEvent:OOJSID("playerWillEnterWitchspace") andReactToAIMessage:@"PLAYER WITCHSPACE"];
+
+		ranrot_srand((unsigned int)[[NSDate date] timeIntervalSince1970]);	// seed randomiser by time
+		[player setRandom_factor:(ranrot_rand() & 255)];						// random factor for market values is reset
+
+// misjump on wormhole sets correct travel time if needed
+		[player addToAdjustTime:[wormhole travelTime]];
+// clear old entities
+		[self removeAllEntitiesExceptPlayer];
+
+// should we add wear-and-tear to the player ship if they're not doing
+// the jump themselves? Left out for now. - CIM
+
+		if (![wormhole withMisjump])
+		{
+			[player setSystem_seed:dest];
+			[self setSystemTo: dest];
+			
+			[self setUpSpace];
+			[player setBounty:([player legalStatus]/2) withReason:kOOLegalStatusReasonNewSystem];
+			if ([player random_factor] < 8) [player erodeReputation];		// every 32 systems or so, dro
+		}
+		else
+		{
+			[player setGalaxyCoordinates:[wormhole destinationCoordinates]];
+
+			[self setUpWitchspaceBetweenSystem:[wormhole origin] andSystem:[wormhole destination]];
+
+			if (randf() < 0.1) [player erodeReputation];		// once every 10 misjumps - should be much rarer than successful jumps!
+		}
+		// which will kick the ship out of the wormhole with the
+		// player still aboard
+
+		//reset atmospherics in case carrier was in atmosphere
+		[UNIVERSE setSkyColorRed:0.0f		// back to black
+											 green:0.0f
+												blue:0.0f
+											 alpha:0.0f];
+
+		[player doScriptEvent:OOJSID("shipWillExitWitchspace")];
+		[player doScriptEvent:OOJSID("shipExitedWitchspace")];
+		[player setWormhole:nil];
+
+}
+
+
 - (void) setUpUniverseFromStation
 {
 	if (![self sun])
@@ -686,6 +742,15 @@ GLfloat docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEVEL, DOC
 
 - (void) setUpWitchspace
 {
+	PlayerEntity*		player = PLAYER;
+	Random_Seed		s1 = player->system_seed;
+	Random_Seed		s2 = player->target_system_seed;
+	[self setUpWitchspaceBetweenSystem:s1 andSystem:s2];
+}
+
+
+- (void) setUpWitchspaceBetweenSystem:(Random_Seed)s1 andSystem:(Random_Seed)s2
+{
 	// new system is hyper-centric : witchspace exit point is origin
 	
 	Entity				*thing;
@@ -694,8 +759,6 @@ GLfloat docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEVEL, DOC
 	
 	NSMutableDictionary *systeminfo = [NSMutableDictionary dictionaryWithCapacity:4];
 	
-	Random_Seed		s1 = player->system_seed;
-	Random_Seed		s2 = player->target_system_seed;
 	NSString*		override_key = [self keyForInterstellarOverridesForSystemSeeds:s1 :s2 inGalaxySeed:galaxy_seed];
 	
 	// check at this point

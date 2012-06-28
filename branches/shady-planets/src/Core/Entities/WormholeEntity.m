@@ -65,6 +65,8 @@ static void DrawWormholeCorona(GLfloat inner_radius, GLfloat outer_radius, int s
 		scan_info = WH_SCANINFO_NONE;
 		scan_time = 0;
 		hasExitPosition = NO;
+		containsPlayer = NO;
+		exit_speed = 50.0;
 	}
 	return self;
 }
@@ -249,10 +251,18 @@ static void DrawWormholeCorona(GLfloat inner_radius, GLfloat outer_radius, int s
 	[ship setStatus:STATUS_ENTERING_WITCHSPACE];
 	[ship doScriptEvent:OOJSID("shipWillEnterWormhole")];
 	[[ship getAI] message:@"ENTERED_WITCHSPACE"];
-	
+
 	[UNIVERSE removeEntity:ship];
 	[[ship getAI] clearStack];	// get rid of any preserved states
-	
+
+	if ([ship isStation])
+	{
+		if ([PLAYER dockedStation] && [PLAYER dockedStation] == (StationEntity*)ship) 
+		{ // the carrier has jumped while the player is docked
+			[UNIVERSE carryPlayerOn:(StationEntity*)ship inWormhole:self];
+		}
+	}		
+
 	return YES;
 }
 
@@ -263,7 +273,9 @@ static void DrawWormholeCorona(GLfloat inner_radius, GLfloat outer_radius, int s
 	int n_ships = [shipsInTransit count];
 	NSMutableArray * shipsStillInTransit = [[NSMutableArray alloc] initWithCapacity:n_ships];
 	BOOL hasShiftedExitPosition = NO;
-	
+	BOOL useExitXYScatter = NO;
+
+
 	int i;
 	for (i = 0; i < n_ships; i++)
 	{
@@ -294,8 +306,34 @@ static void DrawWormholeCorona(GLfloat inner_radius, GLfloat outer_radius, int s
 				position.y += v1.y * d1;
 				position.z += v1.z * d1;
 			}
-			[ship setPosition:position];
 			
+			if (hasExitPosition && (!containsPlayer || useExitXYScatter))
+			{
+				Vector shippos;
+				Vector exit_vector_x = vector_right_from_quaternion([UNIVERSE getWitchspaceExitRotation]);			
+				Vector exit_vector_y = vector_up_from_quaternion([UNIVERSE getWitchspaceExitRotation]);
+// entry wormhole has a radius of around 100m (or perhaps more)
+// so randomise exit positions slightly too for second and subsequent ships
+// helps avoid collisions when two ships enter wormhole at same time
+				double offset_x = randf()*150.0-75.0;
+				double offset_y = randf()*150.0-75.0;
+				shippos.x = position.x + (offset_x*exit_vector_x.x)+(offset_y*exit_vector_y.x);
+				shippos.y = position.y + (offset_x*exit_vector_x.y)+(offset_y*exit_vector_y.y);
+				shippos.z = position.z + (offset_x*exit_vector_x.z)+(offset_y*exit_vector_y.z);
+				[ship setPosition:shippos];
+			}
+			else
+			{
+				// this is the first ship out of the wormhole
+				[self setExitSpeed:[ship maxFlightSpeed]*WORMHOLE_LEADER_SPEED_FACTOR];
+				if (containsPlayer)
+				{ // reset the player's speed to the new speed
+					[PLAYER setSpeed:exit_speed];
+				}
+				useExitXYScatter = YES;
+				[ship setPosition:position];
+			}
+
 			if (shipBeacon != nil)
 			{
 				[ship setBeaconCode:shipBeacon];
@@ -320,10 +358,11 @@ static void DrawWormholeCorona(GLfloat inner_radius, GLfloat outer_radius, int s
 				[ship setOrientation: [UNIVERSE getWitchspaceExitRotation]];
 				[ship setPitch: 0.0];
 				[ship setRoll: 0.0];
-				[ship setSpeed: [ship maxFlightSpeed] * 0.25];
 				[ship setVelocity: kZeroVector];
 				[UNIVERSE addEntity:ship];	// AI and status get initialised here
 			}
+			[ship setSpeed:[self exitSpeed]]; // all ships from this wormhole have same velocity
+
 			
 			// Should probably pass the wormhole, but they have no JS representation
 			[ship doScriptEvent:OOJSID("shipExitedWormhole") andReactToAIMessage:@"EXITED WITCHSPACE"];
@@ -354,7 +393,24 @@ static void DrawWormholeCorona(GLfloat inner_radius, GLfloat outer_radius, int s
 	}
 	[shipsInTransit release];
 	shipsInTransit = shipsStillInTransit;
+
+	if (containsPlayer)
+	{
+		// ships exiting the wormhole after now are following the player
+		// so appear behind them
+		position = vector_add([PLAYER position], vector_multiply_scalar([PLAYER forwardVector], -500.0f));
+		containsPlayer = NO;
+	}
+// else, the wormhole doesn't now (or never) contained the player, so
+// no need to move it
 }
+
+
+- (void) setContainsPlayer:(BOOL)val
+{
+	containsPlayer = val;
+}
+
 
 - (void) setExitPosition:(Vector)pos
 {
@@ -381,6 +437,18 @@ static void DrawWormholeCorona(GLfloat inner_radius, GLfloat outer_radius, int s
 {
 	return destinationCoords;
 }
+
+- (double) exitSpeed
+{
+	return exit_speed;
+}
+
+
+- (void) setExitSpeed:(double) speed
+{
+	exit_speed = speed;
+}
+
 
 - (double) expiryTime
 {
