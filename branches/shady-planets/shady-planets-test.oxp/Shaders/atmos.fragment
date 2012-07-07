@@ -1,0 +1,204 @@
+// Diso is 6155Km
+uniform float fOuterRadius;		// The outer (atmosphere) radius
+//float fOuterRadius = 6205.0;
+
+//uniform float fOuterRadius2;	// fOuterRadius^2
+//float fOuterRadius2 = 44289025.0;
+
+uniform float fInnerRadius;		// The inner (planetary) radius
+//float fInnerRadius = 6155.0;
+
+//uniform float fInnerRadius2;	// fInnerRadius^2
+//float fInnerRadius2 = 37884025.0;
+
+uniform vec3 ooposition;
+
+varying vec3			vEyeVector;
+varying vec2			vTexCoords;
+varying vec3			vLight1Vector;
+varying vec3			vCoords;
+
+varying vec3			CameraPos;
+
+varying vec4			vColor;
+varying vec3			vVertexWorld;
+varying vec3			vVertexObj;
+varying vec3			eyeVector;
+
+varying vec3			vLight1Pos;
+varying vec3			vNormal;
+
+uniform vec4 Scattering;
+//vec3 Scattering = vec3( 0.1,0.25,.8) ;
+//vec3 Scattering = vec3( 0.1,0.15,0.48) ;
+
+/*
+bool planetOccludes(vec3 vPos,vec3 vRay) {
+	float tca = dot(vPos,normalize(vRay));
+	if (tca < 0.0 ) {
+		return false;
+	}
+	//float d2 = fOuterRadius2 - pow(tca,2.0);
+	float d2 = length(ooposition- vPos) - pow(tca,2.0);
+	if (d2 > fInnerRadius2) { 
+		return false;
+	}
+	return true;
+	float thc = sqrt( fInnerRadius2 - d2 );
+	float t0 = tca - thc;
+	float t1 = tca + thc;
+}
+*/
+
+/*
+#ifndef OO_REDUCED_COMPLEXITY
+#define OO_REDUCED_COMPLEXITY = 0
+#endif
+
+#if OO_REDUCED_COMPLEXITY
+
+void main(void) {
+	gl_FragColor = vColor;
+}
+#else
+*/
+
+bool IOsphereIntersect(vec3 vPos,vec3 vRay,float Radius,inout vec3 vIntersect,inout float Dist) {
+	float Radius2= Radius*Radius;	
+	float tca = dot(vPos,normalize(vRay));
+	if (tca < 0.0 ) {
+		return false;
+	}
+	//float d2 = length(ooposition - vPos ) - pow(tca,2.0);
+	float d2 = length(vPos) - pow(tca,2.0);
+	if (d2 > Radius2) { 
+		return false;
+	}
+	float thc = sqrt( Radius2 - d2 );
+	float t0 = tca - thc;
+	float t1 = tca + thc;
+	Dist = thc*2.0;
+	vIntersect = vPos + vRay*t0;
+	return true;	
+}
+
+void main(void) {
+	vColor.rgb = vec3(0.0);
+	vec3 vLightCol = gl_LightSource[1].diffuse.rgb;
+	vec3 Hit;
+	float AtmosDist = 0.0;
+	float SurfaceDist = 0.0;
+	
+	float fObjAtmosDepth =   1.0 - ( ( fOuterRadius-fInnerRadius ) / fOuterRadius );
+	float fObjAtmosMaxDist = sqrt( 1.0 - pow( ( fOuterRadius-fInnerRadius ) / fOuterRadius, 2.0 )  ) ;
+	fObjAtmosMaxDist /= 3.14;
+	bool SurfaceHit=false;
+	bool AtmosHit=false;
+
+	if ( 
+		IOsphereIntersect(vVertexObj,eyeVector, 1.0 ,Hit,AtmosDist) == true) {
+		AtmosHit=true;
+		//AtmosDist= length(vVertexObj - Hit);		
+	}
+	if (IOsphereIntersect(vVertexObj,eyeVector, fObjAtmosDepth ,Hit,SurfaceDist) == true) {
+		SurfaceHit = true;
+		//SurfaceDist = length(vVertexObj - Hit);
+	}
+	float EyeDist;
+	if ( SurfaceHit == true ) {
+		EyeDist = ( AtmosDist - SurfaceDist );
+		//EyeDist = distance(vVertexObj,Hit);
+	} else {
+		EyeDist = AtmosDist; 
+	}
+	//float fScatter = (AtmosDist - SurfaceDist ) / fObjAtmosMaxDist;
+	float fScatter = EyeDist / fObjAtmosMaxDist;
+	float fOpacity;
+	if ( SurfaceHit == true ) {
+		fOpacity = fScatter;
+	} else {
+		fOpacity = pow( EyeDist / fObjAtmosMaxDist , 5.0 );
+	}
+
+
+	vec3 Light1Obj = (gl_LightSource[1].position.xyz -ooposition ) ;
+	float Occlude = dot(normalize(Light1Obj),vVertexObj);
+	float Directional = dot(normalize(vLight1Vector),normalize(vEyeVector));
+	Directional = 1.0 - smoothstep( -1, -0.8 , Directional );
+	Directional *= Directional;
+	Directional *=2.0;
+	Directional += 1.15;
+	/*if ( Directional < 0.0 ) {
+		Directional *= -10.0;
+		Directional += 1.0;
+	} else {
+		Directional = 1.0;
+	}*/
+	vec3 vRayleigh = 2.0 * Scattering * fScatter  *  smoothstep(-0.25,.25, Occlude);
+	vec3 ivRayleigh = 2.0 * Scattering * fScatter  *  smoothstep(.25,-0.25, Occlude);
+	vColor.rgb += vRayleigh;
+	vLightCol -= ivRayleigh;
+	vColor.rgb += (vLightCol * fScatter * Directional );
+
+
+	//vColor.a = fScatter * Directional;
+	//vColor.a = fOpacity * Directional;
+	vColor.a = fOpacity * Directional;
+	vColor.a *= 1.0 * smoothstep(-0.25,0.05, Occlude);
+	//vColor.a= 1.0;	
+
+// SAMPLING
+/*
+	int iSamples = 5;
+	float fSamples = 5.0;
+
+	float depthScale = fOuterRadius - fInnerRadius;
+	float EyeDist;
+	if ( SurfaceHit == true ) {
+		EyeDist = ( AtmosDist - SurfaceDist ) / 2.0;
+		//EyeDist = distance(vVertexObj,Hit);
+	} else {
+		EyeDist = AtmosDist; 
+	}
+	
+	vec3 dOffset = (-normalize(eyeVector)  * EyeDist ) / fSamples;
+
+	vec3 samplePoint = vVertexObj;
+	float fOcclude = 1.0;
+	vec3 PlanetHit;
+	float PlanetDist = 1.0;
+	vec3 Light1Obj = (gl_LightSource[1].position.xyz -ooposition ) ;
+	float fDensity = 0.0;
+// Occlusion samples
+
+	vec3 vScatter = vec3(0.0);
+
+for (int i=0;i < iSamples;i++) { 
+
+	samplePoint += dOffset;
+	fDensity +=  pow( 1 -smoothstep( fInnerRadius, fOuterRadius , length(samplePoint)*fOuterRadius  ), 2.0 );
+	float Occlude = dot(normalize(Light1Obj),samplePoint);
+	fOcclude -= smoothstep(-0.20,0.5, Occlude)/fSamples;
+	//
+
+	vec3 vRayleigh = (  Scattering * fDensity   *  smoothstep(0,1, Occlude)  )/ fSamples;
+	vec3 ivRayleigh = (  Scattering * fDensity   *  smoothstep(1,0, Occlude)  )/ fSamples;
+	vScatter += vRayleigh ;	
+	vLightCol -= ivRayleigh;
+	// Mie 
+	vScatter += ( 0.1 * vLightCol * fDensity ) / fSamples;	
+	//vScatter = vLightCol;	
+}	
+
+	fDensity /= fSamples;
+	vColor.a = fDensity * (1.0-fOcclude);
+	//vColor.a = 1.0;
+	vColor.rgb = vScatter.rgb;
+	vColor.rgb /= vColor.a;
+*/ 
+
+	gl_FragColor = vColor;	
+}
+
+
+

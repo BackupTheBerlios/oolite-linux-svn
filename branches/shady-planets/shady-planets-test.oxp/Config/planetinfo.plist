@@ -1,0 +1,197 @@
+{
+  "universal" = {
+
+  };
+  "0 7" = {
+	atmosphere_texture = "planet_halo7";
+	shaders = {
+            "planet_halo7" =
+                        {
+                            vertex_shader = "atmos.vertex";
+                            fragment_shader = "atmos.fragment";
+			uniforms  = { 
+				_Object2World = { type = binding ; asMatrix = true ;  binding="_transform";} ;
+				ooposition = { type = binding ; binding="position"; };
+				relativePosition = { type = binding ; binding="relativePosition" };
+				fOuterRadius = { type = binding ; binding="atmosphereRadius" };
+				fInnerRadius = { type = binding ; binding="planetRadius" };
+				Scattering = { type = vector ; value = "0.15 0.35 0.8"; };
+			};
+             };
+	};
+  };
+  "0 55" = {
+	texture = "leesti";
+	atmosphere_texture = "planet_halo55";
+	shaders = {
+            "leesti" = {
+                                shininess = 10;
+                                specular_color = "1.0 1.0 1.0 0.5";
+                                uniforms = {
+                                        uCubeMap = { type = texture; value = 0; };
+                                        uSpecularMap = { type = texture; value=1 };
+                                        uEmissionMap = { type = texture; value=2 };
+                                        uNormalMap = { type = texture ; value=3 };
+                                        //uCloudMap = { type = texture ;value=4 };
+                                        uParallaxScale = { type = float ; value=0.05 };
+                                        uParallaxBias =  { type = float ; value=-0.05 };
+                                };
+                                fragment_shader = "cube_map_planet.fs";
+                                vertex_shader = "cube_map_planet.vs";
+                                textures =
+                                (
+                                        { name = "planet_surface_diffuse.png";  cube_map = yes; },
+                                        { name = "planet_surface_specular.png"; cube_map = yes; },
+                                        { name = "planet_surface_emission.png"; cube_map = yes; },
+                                        { name = "planet_surface_normpara.png"; cube_map = yes; },
+                                       //{ name = "planet_clouds.png" ; cube_map = yes; },
+                                );
+
+            };
+            "planet_halo55" =
+                        {
+                            vertex_shader = "atmos.vertex";
+                            fragment_shader = "atmos.fragment";
+			uniforms  = { 
+				_Object2World = { type = binding ; asMatrix = true ;  binding="_transform";} ;
+				ooposition = { type = binding ; binding="position"; };
+				relativePosition = { type = binding ; binding="relativePosition" };
+				fOuterRadius = { type = binding ; binding="atmosphereRadius" };
+				fInnerRadius = { type = binding ; binding="planetRadius" };
+				Scattering = { type = vector ; value = "0.1 1.0 0.5"; };
+			};
+             };
+	};
+  };
+  "0 39" = {
+	description = "Reorte is a single texture testing planet";
+	texture = "ll_planet_surface_diffuse.png";
+	atmosphere_texture = "planet_halo39";
+	shaders = {
+            "planet_halo39" =
+                        {
+                            vertex_shader = "atmos.vertex";
+                            fragment_shader = "atmos.fragment";
+			uniforms  = { 
+				_Object2World = { type = binding ; asMatrix = true ;  binding="_transform";} ;
+				ooposition = { type = binding ; binding="position"; };
+				relativePosition = { type = binding ; binding="relativePosition" };
+				fOuterRadius = { type = binding ; binding="atmosphereRadius" };
+				fInnerRadius = { type = binding ; binding="planetRadius" };
+				Scattering = { type = vector ; value = "0.075 0.125 0.6"; };
+			};
+             };
+	};
+   };
+
+  "0 147" = {
+	description = "Diso is a material testing planet.";
+	"rotational_velocity" = "0.05";
+	"texture" = "gas-giant-lower.png";
+	"atmosphere_texture" = "gas-giant-atmos.png";
+      shaders =
+            {
+
+		"gas-giant-atmos.png" = {
+			vertex_shader = "cube_map_gasgiant.vertex";
+			fragment_shader = "cube_map_gasgiant.fragment";
+			uniforms = {
+				uCubeMap = { type = texture ; value = 0 ; };
+				uWaveletMap = { type = texture ; value = 1 ; };
+				parallaxScale = { type = float ; value = "-0.2"; };
+				parallaxBias = { type = float ; value = "1.20"; };
+				alphaScale = { type = float ; value = "1.0" ; };
+				fOuterRadius = { type = binding ; binding="atmosphereRadius" };
+				fInnerRadius = { type = binding ; binding="planetRadius" };
+			};
+			textures = (
+				{ name = "gas-giant.png" ; cube_map = yes; },
+				{ name = "gas-giant-wavelet.png" ; cube_map = yes; },
+			);		
+		};
+		"gas-giant-lower.png" = {
+			vertex_shader = "cube_map_gasgiant.vertex";
+			fragment_shader = "cube_map_gasgiant.fragment";
+			uniforms = {
+				uCubeMap = { type = texture ; value = 0 ; };
+				uWaveletMap = { type = texture ; value = 1 ; };
+				parallaxScale = { type = float ; value = "-0.2"; };
+				parallaxBias = { type = float ; value = "1.2"; };
+				alphaScale = { type = float ; value = "0.0" ; };
+				fOuterRadius = { type = binding ; binding="atmosphereRadius" };
+				fInnerRadius = { type = binding ; binding="planetRadius" };
+			};
+			textures = (
+				{ name = "gas-giant.png" ; cube_map = yes; },
+				{ name = "gas-giant-wavelet.png" ; cube_map = yes; },
+			);		
+		};
+            "planet_halo" =
+                        {
+                            vertex_shader = "atmos.vertex";
+                            fragment_shader = "atmos.fragment";
+			uniforms  = { 
+				ooposition = { type = binding ; binding="position"; };
+				fOuterRadius = { type = binding ; binding="atmosphereRadius" };
+				fInnerRadius = { type = binding ; binding="planetRadius" };
+			};
+             };
+
+      };
+//
+   };
+
+   "0 129" = {
+       description = "Zaonce is a testing planet for griff's earth shader";
+	texture = "Zaonce";
+	atmosphere_texture = "planet_halo129";
+	materials =
+	{
+		"Zaonce" =
+		{
+			diffuse_map =
+			{
+				name = "earth_diffusemap.png";
+				repeat_s = true;
+			};
+		};
+	};
+		
+	shaders = 
+		{ 
+            "Zaonce" = 
+			{ 
+			vertex_shader = "griff_earth.vertex"; 
+			fragment_shader = "griff_earth.fragment"; 
+			textures = 
+				(
+					"earth_diffusemap.png", 
+					{name = "earth_normalmap.png"; repeat_s = "yes";}
+				);
+			uniforms =
+				{
+				uColorMap = { type = texture; value = 0; };
+				uNormalMap = { type = texture; value = 1; };
+				nightmutedColor = { type = vector; value = "0.0 0.16 0.33"; }; 
+				citylightColor = { type = vector; value = "0.89 0.86 0.52"; };	
+				atmosphereColor = { type = vector; value = "0.0044 0.6382 1.0"; };
+			};						 
+		};	
+	    "planet_halo129" =
+                        {
+                            vertex_shader = "atmos.vertex";
+                            fragment_shader = "atmos.fragment";
+			uniforms  = { 
+				//_Object2World = { type = binding ; asMatrix = true ;  binding="_transform";} ;
+				ooposition = { type = binding ; binding="position"; };
+				//relativePosition = { type = binding ; binding="relativePosition" };
+				fOuterRadius = { type = binding ; binding="atmosphereRadius" };
+				fInnerRadius = { type = binding ; binding="planetRadius" };
+				Scattering = { type = vector ; value = "0.05 0.35 0.6"; };
+			};
+             };
+		
+    	};
+    };
+
+}

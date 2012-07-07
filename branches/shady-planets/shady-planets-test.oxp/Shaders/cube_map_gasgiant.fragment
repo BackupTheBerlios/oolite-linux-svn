@@ -1,0 +1,286 @@
+/*
+	oolite-default-shader.fragment
+	Default fragment shader for Oolite ships.
+	
+	This is similar to normal ship shaders, but has special controlling
+	macros (like OOSTD_DIFFUSE_MAP, OOSTD_SPECULAR etc.) which are specific
+	to the default shader.
+	
+	
+	Copyright © 2007–2011 Jens Ayton
+	
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+	
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+	
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
+*/
+
+
+#define OOSTD_DIFFUSE_MAP 0
+
+
+#define OOSTD_DIFFUSE_MAP_IS_CUBE_MAP 0
+
+#ifndef OOSTD_SPECULAR
+#define OOSTD_SPECULAR 0
+#undef OOSTD_SPECULAR_MAP
+#endif
+
+#ifndef OOSTD_SPECULAR_MAP
+#define OOSTD_SPECULAR_MAP 0
+#endif
+
+#ifndef OOSTD_NORMAL_MAP
+#define OOSTD_NORMAL_MAP 0
+#endif
+
+#ifndef OOSTD_NORMAL_AND_PARALLAX_MAP
+#define OOSTD_NORMAL_AND_PARALLAX_MAP 0
+#endif
+
+#ifndef OOSTD_EMISSION
+#define OOSTD_EMISSION 0
+#endif
+
+#ifndef OOSTD_EMISSION_MAP
+#define OOSTD_EMISSION_MAP 0
+#endif
+
+#ifndef OOSTD_ILLUMINATION_MAP
+#define OOSTD_ILLUMINATION_MAP 0
+#endif
+
+#ifndef OOSTD_EMISSION_AND_ILLUMINATION_MAP
+#define OOSTD_EMISSION_AND_ILLUMINATION_MAP 0
+#endif
+
+
+#if OOSTD_EMISSION_AND_ILLUMINATION_MAP && !OOSTD_EMISSION_MAP
+#undef OOSTD_EMISSION_MAP
+#define OOSTD_EMISSION_MAP 1
+#endif
+#if OOSTD_EMISSION_AND_ILLUMINATION_MAP && OOSTD_ILLUMINATION_MAP
+#undef OOSTD_EMISSION_AND_ILLUMINATION_MAP
+#define OOSTD_EMISSION_AND_ILLUMINATION_MAP 0
+#endif
+#if OOSTD_NORMAL_AND_PARALLAX_MAP && !OOSTD_NORMAL_MAP
+#undef OOSTD_NORMAL_AND_PARALLAX_MAP
+#define OOSTD_NORMAL_AND_PARALLAX_MAP 0
+#endif
+
+
+#define NEED_EYE_VECTOR (OOSTD_SPECULAR || OOSTD_NORMAL_AND_PARALLAX_MAP)
+
+#define HAVE_ILLUMINATION (OOSTD_EMISSION_AND_ILLUMINATION_MAP || OOSTD_ILLUMINATION_MAP)
+
+attribute vec3                  tangent;
+
+//varying vec3			eyeVector;
+varying vec3			vEyeVector;
+varying vec2			vTexCoord;
+varying vec3			vLight1Vector;
+varying vec3			vCubeTexCoords;
+varying vec3			vVertexObj;
+
+uniform samplerCube		uCubeMap;
+
+uniform samplerCube		uWaveletMap;
+
+uniform float parallaxScale;
+uniform float parallaxBias;
+uniform float alphaScale;
+
+uniform float fOuterRadius;
+uniform float fInnerRadius;	
+
+
+vec4 CalcDiffuseLight(in vec3 lightVector, in vec3 normal, in vec4 lightColor)
+{
+
+	float intensity = dot(normal, lightVector);
+	
+	intensity = max(intensity, 0.0);
+	intensity = smoothstep( 0.0 , 0.3 , intensity );	
+	//intensity = pow( intensity , 3.0 );
+	return lightColor * intensity;
+}
+
+
+vec4 CalcSpecularLight(in vec3 lightVector, in vec3 eyeVector, in float exponent, in vec3 normal, in vec4 lightColor)
+{
+
+	vec3 reflection = -reflect(lightVector, normal);
+
+	float intensity = dot(reflection, eyeVector);
+	intensity = pow(max(intensity, 0.0), exponent);
+	return lightColor * intensity;
+}
+
+
+bool IOsphereIntersect(vec3 vPos,vec3 vRay,float Radius,inout vec3 vIntersect,inout float Dist) {
+	float Radius2= Radius*Radius;	
+	float tca = dot(vPos,normalize(vRay));
+	if (tca < 0.0 ) {
+		return false;
+	}
+	//float d2 = length(ooposition - vPos ) - pow(tca,2.0);
+	float d2 = length(vPos) - pow(tca,2.0);
+	if (d2 > Radius2) { 
+		return false;
+	}
+	float thc = sqrt( Radius2 - d2 );
+	float t0 = tca - thc;
+	float t1 = tca + thc;
+	Dist = thc*2.0;
+	vIntersect = vPos + vRay*t0;
+	return true;	
+}
+
+
+
+void main(void)
+{
+	vec4 totalColor = vec4(0);
+
+
+	
+	// Get eye vector
+	vec3 eyeVector = normalize(vEyeVector);
+
+	// Get light vectors
+	vec3 lightVector = normalize(vLight1Vector);
+	vec3 invLightVector = -normalize(vLight1Vector);
+	vec3 normal = vec3(0.0, 0.0, 1.0);
+
+	float depth = textureCube(uCubeMap, vCubeTexCoords).r ;
+	vec4 waveletVec = textureCube(uWaveletMap,vCubeTexCoords);
+
+
+	//float parallax = 1.0 - depth * parallaxScale;
+	normal +=  normal * waveletVec * 0.3 ;
+
+	//vec3 ParallaxCubeTexCoords =	
+	//vec3 ParallaxCubeTexCoords =  vCubeTexCoords + ( parallaxScale * eyeVector ) ;
+	vec3  ParallaxCubeTexCoords =  vCubeTexCoords + ( depth * parallaxScale * eyeVector);
+
+	
+
+	// Get ambient colour
+	vec4 ambientLight = gl_LightModel.ambient;
+	
+
+	vec4 diffuseLight = vec4(0);
+	diffuseLight += CalcDiffuseLight(lightVector, normal, gl_LightSource[1].diffuse);
+	vec4 diffuseLightFlat = vec4(0);
+	diffuseLightFlat += CalcDiffuseLight(lightVector, vec3(0.0,0.0,1.0) , gl_LightSource[1].diffuse);
+	
+
+/*	
+	// Get specular parameters
+	vec4 specularMapColor = textureCube(uSpecularMap, ParallaxCubeTexCoords);
+	float specularExponentLevel = pow(specularMapColor.a, 2.0) + 0.001;
+	specularMapColor.a = 1.0;
+	#define APPLY_MAPPED_EXPONENT exponent = (exponent - 1.0) * specularExponentLevel + 1.0
+*/
+	// Calculate specular light
+
+ /* ray distance --------------------------------------------------------
+	vec3 Hit;
+	float AtmosDist = 0.0;
+	float SurfaceDist = 0.0;
+	
+	float fObjAtmosDepth =   1.0 - ( ( fOuterRadius-fInnerRadius ) / fOuterRadius );
+	float fObjAtmosMaxDist = sqrt( 1.0 - pow( ( fOuterRadius-fInnerRadius ) / fOuterRadius, 2.0 )  ) ;
+	fObjAtmosMaxDist /= 3.14;
+	bool SurfaceHit=false;
+	bool AtmosHit=false;
+
+	if ( 
+		IOsphereIntersect(vVertexObj,eyeVector, 1.0 ,Hit,AtmosDist) == true) {
+		AtmosHit=true;
+		//AtmosDist= length(vVertexObj - Hit);		
+	}
+	if (IOsphereIntersect(vVertexObj,eyeVector, fObjAtmosDepth ,Hit,SurfaceDist) == true) {
+		SurfaceHit = true;
+		//SurfaceDist = length(vVertexObj - Hit);
+	}
+	float EyeDist;
+	if ( SurfaceHit == true ) {
+		EyeDist = ( AtmosDist - SurfaceDist );
+		//EyeDist = distance(vVertexObj,Hit);
+	} else {
+		EyeDist = AtmosDist; 
+	}
+	//float fScatter = (AtmosDist - SurfaceDist ) / fObjAtmosMaxDist;
+	float fScatter = EyeDist / fObjAtmosMaxDist;
+	float fOpacity;
+	if ( SurfaceHit == true ) {
+		fOpacity = fScatter;
+	} else {
+		fOpacity = pow( EyeDist / fObjAtmosMaxDist , 5.0 );
+	}
+  ---------------------------------------------------------------- */
+
+	float Directional = dot(eyeVector,vCubeTexCoords);
+	Directional = 1.0 - smoothstep( -1, -0.8 , Directional );
+	
+	vec4 specularLight = vec4(0);
+	float exponent = 20;
+	specularLight += CalcSpecularLight(
+				lightVector, eyeVector,
+				exponent, 
+				normal , 
+				gl_LightSource[1].specular
+	);	
+	specularLight.a = 0.0;
+
+	
+	vec4 ambientColor = gl_FrontMaterial.ambient;
+	vec4 diffuseColor = gl_FrontMaterial.diffuse;
+
+
+	vec4 diffuseMapColor = textureCube(uCubeMap, ParallaxCubeTexCoords);
+	//vec4 specularColor = gl_FrontMaterial.specular;
+	vec4 specularColor = diffuseMapColor * waveletVec * 0.1;
+	// modulate the hilight per the specular map color
+	//specularColor *= specularMapColor;
+
+
+	// Parallax modified CubeTexCoords
+
+
+	//diffuseMapColor.rgb =  diffuseMapColor.rgb + diffuseLight * (waveletVec.rgb  - vec3(0.5) );	
+	
+	diffuseMapColor.a = 1.0 - ( (1.0 - diffuseMapColor.r ) * alphaScale );
+	
+	diffuseColor *= diffuseMapColor;
+	ambientColor *= diffuseMapColor;
+
+
+//	totalColor += ambientColor * ambientLight + diffuseColor * diffuseLight * cloud_shadow;
+	totalColor += ambientColor * ambientLight + diffuseColor * diffuseLight; 
+
+	totalColor += specularColor * specularLight;
+
+
+
+//	totalColor.a *= fOpacity;
+	//totalColor.a = fOpacity;
+	totalColor.a = clamp(totalColor.a,0.0,1.0);
+
+	
+	gl_FragColor = totalColor;
+}

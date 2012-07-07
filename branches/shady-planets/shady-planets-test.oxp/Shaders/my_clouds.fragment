@@ -1,0 +1,41 @@
+// Uniforms
+uniform sampler2D	uTexture0;
+
+
+// Varyings
+varying vec2		vTexCoords;
+varying vec3		vLightVector;
+varying vec3		vEyeVector;
+
+
+void main(void)
+{
+	vec3 totalColor = vec3(0.0);
+	
+	vec2 texCoords = vTexCoords;
+	vec3 eyeVector = normalize(vEyeVector);
+	
+	
+	// Texture lookups
+	vec4 tex0Sample = texture2D(uTexture0, texCoords);  // planet_clouds.png
+	
+	vec3 diffuseColor = tex0Sample.rgb;
+	
+	vec3 lightVector = normalize(vLightVector);
+	
+	// Diffuse (Lambertian) and ambient lighting
+	vec3 diffuseLight = (gl_LightSource[1].diffuse * max(0.0, lightVector.z) + gl_LightModel.ambient).rgb;
+	
+	// Specular (Blinn-Phong) lighting
+	vec3 specularColor = vec3(0.2, 0.2, 0.2);  // Constant colour
+	const float specularExponent = 10.0;
+	vec3 reflection = vec3(lightVector.x, lightVector.y, lightVector.z);  // Equivalent to reflect(lightVector, normal) since normal is known to be (0, 0, 1) in tangent space.
+	//vec3 reflection = reflect(lightVector, normal);
+	float specIntensity = dot(reflection, eyeVector);
+	specIntensity = pow(max(0.0, specIntensity), specularExponent);
+	totalColor += specIntensity * specularColor * gl_LightSource[1].specular.rgb;
+	
+	totalColor += diffuseColor * diffuseLight;
+	//gl_FragColor = vec4(totalColor, tex0Sample.a );
+	gl_FragColor = vec4(totalColor, 1.0 );
+}

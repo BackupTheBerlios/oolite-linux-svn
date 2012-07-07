@@ -1,0 +1,87 @@
+uniform sampler2D    uColorMap;
+uniform sampler2D    uNormalMap;
+
+// Varying Vec's from the Vetrex Shader
+   varying vec2         vTexCoord;
+   varying vec3         vEyeVector;   // These are all in tangent space
+   varying vec3         vLight0Vector;
+   varying vec3         vLight1Vector;
+   varying float LightLevel;
+
+// Constants
+   const float kSpecExponent = 2.0;
+const float Terminator = 0.3;
+const float InvTerminator = 1.0 / (2.0 * Terminator);
+
+// Uniforms from Oolite
+   uniform vec4 nightmutedColor;
+   uniform vec4 citylightColor;
+   uniform vec4 atmosphereColor;
+   
+void Light(in vec3 lightVector, in vec3 normal, in vec4 lightColor, in vec3 eyeVector, 
+           in float specExponent, inout vec4 totalDiffuse, inout vec4 totalSpecular, out float rimlight)
+{
+   lightVector = normalize(lightVector);
+   vec3 reflection = normalize(-reflect(lightVector, normal));
+   rimlight = 0.5 - dot(normalize(eyeVector), normal);
+   totalDiffuse += gl_FrontMaterial.diffuse * lightColor * max(dot(normal, lightVector), 0.0);
+   totalSpecular += lightColor * pow(max(dot(reflection, eyeVector), 0.0), specExponent);
+}
+
+
+#define LIGHT(idx, vector) Light(vector, normal, gl_LightSource[idx].diffuse, eyeVector, kSpecExponent, diffuse, specular, rimlight)
+
+
+void main()
+{
+   float rimlight = 0.0;
+   vec3 eyeVector = normalize(vEyeVector);
+   vec2 texCoord = vTexCoord;
+   
+vec4 normalMap = texture2D(uNormalMap, texCoord); // Hull Illum map in Alpha channel, not used in this shader
+   vec3 normal = normalize((normalMap.xyz) - 0.5);
+   vec4 colorMap = texture2D(uColorMap, texCoord);
+   vec4 diffuse = vec4(0.0), specular = vec4(0);
+
+// Load the Specular intensity map from teh colourmap Alpha Channel
+float specIntensity = colorMap.a;
+
+// Load the Illumination (Nighttime citylights) map from the Normal Map Alpha Channel
+float  illumMap = normalMap.a;
+
+#ifdef OO_LIGHT_0_FIX
+   LIGHT(0, normalize(vLight0Vector));
+#endif
+   LIGHT(1, normalize(vLight1Vector)); // change the 0 to 1 when exporting back to oolite
+   
+    diffuse += gl_FrontMaterial.ambient * gl_LightModel.ambient;
+
+// calculate the colour, use the Oolite system sun position to determin day & night planet sides   
+
+// first assume it's daytime and set the final colour accordingly  
+ vec4 color = diffuse * colorMap;
+      color += specular * specIntensity; // calculate the specular
+ 
+// these next day/night recolouring effects are available in full shader mode only   
+   #ifndef OO_REDUCED_COMPLEXITY 
+ 
+vec4 nightcolor = color * nightmutedColor + illumMap * citylightColor;
+      
+// if fully dark, select mute the colours of the texturemap and add in the city lights illumination map
+    if (LightLevel < -Terminator)
+    {
+        color = nightcolor;
+    }      
+        
+// within the twilight zone, mix night/day
+    if (abs(LightLevel) < Terminator )
+   {
+        color = mix(nightcolor, color, (LightLevel + Terminator) * InvTerminator);
+      }
+
+#endif 
+// add the atmoshpere 'rim light'
+//color += max(rimlight,0.0) * atmosphereColor;
+// Output the final colour    
+   gl_FragColor = color;
+}
