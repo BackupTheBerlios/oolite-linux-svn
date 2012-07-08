@@ -20,7 +20,8 @@ varying vec3			vCoords;
 
 varying vec3			CameraPos;
 
-varying vec4			vColor;
+//varying vec4			vColor;
+vec4			vColor;
 varying vec3			vVertexWorld;
 varying vec3			vVertexObj;
 varying vec3			eyeVector;
@@ -124,7 +125,7 @@ void main(void) {
 	vec3 Light1Obj = (gl_LightSource[1].position.xyz -ooposition ) ;
 	float Occlude = dot(normalize(Light1Obj),vVertexObj);
 	float Directional = dot(normalize(vLight1Vector),normalize(vEyeVector));
-	Directional = 1.0 - smoothstep( -1, -0.8 , Directional );
+	Directional = 1.0 - smoothstep( -1.0, -0.8 , Directional );
 	Directional *= Directional;
 	Directional *=2.0;
 	Directional += 1.15;
@@ -134,10 +135,10 @@ void main(void) {
 	} else {
 		Directional = 1.0;
 	}*/
-	vec3 vRayleigh = 2.0 * Scattering * fScatter  *  smoothstep(-0.25,.25, Occlude);
-	vec3 ivRayleigh = 2.0 * Scattering * fScatter  *  smoothstep(.25,-0.25, Occlude);
-	vColor.rgb += vRayleigh;
-	vLightCol -= ivRayleigh;
+	vec4 vRayleigh = 2.0 * Scattering * fScatter  *  smoothstep(-0.25,.25, Occlude);
+	vec4 ivRayleigh = 2.0 * Scattering * fScatter  *  smoothstep(.25,-0.25, Occlude);
+	vColor += vRayleigh;
+	vLightCol -= ivRayleigh.rgb;
 	vColor.rgb += (vLightCol * fScatter * Directional );
 
 
@@ -199,6 +200,3 @@ for (int i=0;i < iSamples;i++) {
 
 	gl_FragColor = vColor;	
 }
-
-
-

@@ -86,7 +86,8 @@
 
 #define HAVE_ILLUMINATION (OOSTD_EMISSION_AND_ILLUMINATION_MAP || OOSTD_ILLUMINATION_MAP)
 
-attribute vec3                  tangent;
+//attribute vec3                  tangent;
+vec3                  tangent;
 
 varying vec3			vEyeVector;
 
@@ -118,7 +119,7 @@ vec4 CalcDiffuseLight(in vec3 lightVector, in vec3 normal, in vec4 lightColor)
 	float intensity = dot(normal, lightVector);
 	
 	intensity = max(intensity, 0.0);
-	intensity = pow( intensity , 3 );
+	intensity = pow( intensity , 3.0 );
 	return lightColor * intensity;
 }
 
@@ -245,7 +246,7 @@ void main(void)
 	ambientColor *= diffuseMapColor;
 
 	// dim the emission map on the light side.
-	float diffuseLightInvert =  pow(1-diffuseLight , 3 ) ;
+	float diffuseLightInvert =  pow(1.0 - diffuseLight.a, 3.0 ) ;
 	emissionColor *= diffuseLightInvert;
 	
 

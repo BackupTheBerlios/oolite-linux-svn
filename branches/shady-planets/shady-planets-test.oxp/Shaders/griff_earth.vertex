@@ -1,7 +1,9 @@
 //#define OO_TANGENT_ATTR 1  // <---- Define OO_TANGENT_ATTR to 1 so that Oolite gives correct tangent data to shader. 
 #ifdef OO_TANGENT_ATTR 
-attribute vec3 tangent; 
+//attribute vec3 tangent;
+vec3 tangent;
 #else 
+#define OO_TANGENT_ATTR 0
 #endif
 
 varying vec2  vTexCoord;
