@@ -12,9 +12,9 @@
 			uniforms  = { 
 				_Object2World = { type = binding ; asMatrix = true ;  binding="_transform";} ;
 				ooposition = { type = binding ; binding="position"; };
-				relativePosition = { type = binding ; binding="relativePosition" };
-				fOuterRadius = { type = binding ; binding="atmosphereRadius" };
-				fInnerRadius = { type = binding ; binding="planetRadius" };
+				relativePosition = { type = binding ; binding="relativePosition"; };
+				fOuterRadius = { type = binding ; binding="atmosphereRadius"; };
+				fInnerRadius = { type = binding ; binding="planetRadius"; };
 				Scattering = { type = vector ; value = "0.15 0.35 0.8"; };
 			};
              };
@@ -29,12 +29,12 @@
                                 specular_color = "1.0 1.0 1.0 0.5";
                                 uniforms = {
                                         uCubeMap = { type = texture; value = 0; };
-                                        uSpecularMap = { type = texture; value=1 };
-                                        uEmissionMap = { type = texture; value=2 };
-                                        uNormalMap = { type = texture ; value=3 };
-                                        //uCloudMap = { type = texture ;value=4 };
-                                        uParallaxScale = { type = float ; value=0.05 };
-                                        uParallaxBias =  { type = float ; value=-0.05 };
+                                        uSpecularMap = { type = texture; value=1; };
+                                        uEmissionMap = { type = texture; value=2; };
+                                        uNormalMap = { type = texture ; value=3; };
+                                        //uCloudMap = { type = texture ;value=4; };
+                                        uParallaxScale = { type = float ; value=0.05; };
+                                        uParallaxBias =  { type = float ; value=-0.05; };
                                 };
                                 fragment_shader = "cube_map_planet.fs";
                                 vertex_shader = "cube_map_planet.vs";
@@ -55,9 +55,9 @@
 			uniforms  = { 
 				_Object2World = { type = binding ; asMatrix = true ;  binding="_transform";} ;
 				ooposition = { type = binding ; binding="position"; };
-				relativePosition = { type = binding ; binding="relativePosition" };
-				fOuterRadius = { type = binding ; binding="atmosphereRadius" };
-				fInnerRadius = { type = binding ; binding="planetRadius" };
+				relativePosition = { type = binding ; binding="relativePosition"; };
+				fOuterRadius = { type = binding ; binding="atmosphereRadius"; };
+				fInnerRadius = { type = binding ; binding="planetRadius"; };
 				Scattering = { type = vector ; value = "0.1 1.0 0.5"; };
 			};
              };
@@ -75,9 +75,9 @@
 			uniforms  = { 
 				_Object2World = { type = binding ; asMatrix = true ;  binding="_transform";} ;
 				ooposition = { type = binding ; binding="position"; };
-				relativePosition = { type = binding ; binding="relativePosition" };
-				fOuterRadius = { type = binding ; binding="atmosphereRadius" };
-				fInnerRadius = { type = binding ; binding="planetRadius" };
+				relativePosition = { type = binding ; binding="relativePosition"; };
+				fOuterRadius = { type = binding ; binding="atmosphereRadius"; };
+				fInnerRadius = { type = binding ; binding="planetRadius"; };
 				Scattering = { type = vector ; value = "0.075 0.125 0.6"; };
 			};
              };
@@ -101,8 +101,8 @@
 				parallaxScale = { type = float ; value = "-0.2"; };
 				parallaxBias = { type = float ; value = "1.20"; };
 				alphaScale = { type = float ; value = "1.0" ; };
-				fOuterRadius = { type = binding ; binding="atmosphereRadius" };
-				fInnerRadius = { type = binding ; binding="planetRadius" };
+				fOuterRadius = { type = binding ; binding="atmosphereRadius"; };
+				fInnerRadius = { type = binding ; binding="planetRadius"; };
 			};
 			textures = (
 				{ name = "gas-giant.png" ; cube_map = yes; },
@@ -118,8 +118,8 @@
 				parallaxScale = { type = float ; value = "-0.2"; };
 				parallaxBias = { type = float ; value = "1.2"; };
 				alphaScale = { type = float ; value = "0.0" ; };
-				fOuterRadius = { type = binding ; binding="atmosphereRadius" };
-				fInnerRadius = { type = binding ; binding="planetRadius" };
+				fOuterRadius = { type = binding ; binding="atmosphereRadius"; };
+				fInnerRadius = { type = binding ; binding="planetRadius"; };
 			};
 			textures = (
 				{ name = "gas-giant.png" ; cube_map = yes; },
@@ -132,8 +132,8 @@
                             fragment_shader = "atmos.fragment";
 			uniforms  = { 
 				ooposition = { type = binding ; binding="position"; };
-				fOuterRadius = { type = binding ; binding="atmosphereRadius" };
-				fInnerRadius = { type = binding ; binding="planetRadius" };
+				fOuterRadius = { type = binding ; binding="atmosphereRadius"; };
+				fInnerRadius = { type = binding ; binding="planetRadius"; };
 			};
              };
 
@@ -184,9 +184,9 @@
 			uniforms  = { 
 				//_Object2World = { type = binding ; asMatrix = true ;  binding="_transform";} ;
 				ooposition = { type = binding ; binding="position"; };
-				//relativePosition = { type = binding ; binding="relativePosition" };
-				fOuterRadius = { type = binding ; binding="atmosphereRadius" };
-				fInnerRadius = { type = binding ; binding="planetRadius" };
+				//relativePosition = { type = binding ; binding="relativePosition"; };
+				fOuterRadius = { type = binding ; binding="atmosphereRadius"; };
+				fInnerRadius = { type = binding ; binding="planetRadius"; };
 				Scattering = { type = vector ; value = "0.05 0.35 0.6"; };
 			};
              };
