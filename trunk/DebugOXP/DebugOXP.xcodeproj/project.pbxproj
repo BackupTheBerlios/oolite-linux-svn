@@ -108,7 +108,7 @@
 		089C1672FE841209C02AAC07 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = /System/Library/Frameworks/Foundation.framework; sourceTree = "<absolute>"; };
 		089C167FFE841241C02AAC07 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = /System/Library/Frameworks/AppKit.framework; sourceTree = "<absolute>"; };
 		1058C7ADFEA557BF11CA2CBB /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = /System/Library/Frameworks/Cocoa.framework; sourceTree = "<absolute>"; };
-		1A0255330C7E1BF000F622D4 /* debugLogMessageClassesMenu.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist; path = debugLogMessageClassesMenu.plist; sourceTree = "<group>"; };
+		1A0255330C7E1BF000F622D4 /* debugLogMessageClassesMenu.plist */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; path = debugLogMessageClassesMenu.plist; sourceTree = "<group>"; };
 		1A02553B0C7E1C3300F622D4 /* DebugOXPLocatorBeacon.magic */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = DebugOXPLocatorBeacon.magic; sourceTree = "<group>"; };
 		1A0256230C7F0D7100F622D4 /* OOJavaScriptConsoleController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OOJavaScriptConsoleController.h; sourceTree = "<group>"; };
 		1A0256240C7F0D7100F622D4 /* OOJavaScriptConsoleController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = OOJavaScriptConsoleController.m; sourceTree = "<group>"; };
@@ -123,7 +123,7 @@
 		1A0CF1B00D89FD7700E0B568 /* OOAIDebugInspectorModule.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = OOAIDebugInspectorModule.m; sourceTree = "<group>"; };
 		1A0CF1B60D89FD9A00E0B568 /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/OOAIDebugInspectorModule.xib; sourceTree = "<group>"; };
 		1A22976414DE86C00024BED9 /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/OODebugController.xib; sourceTree = "<group>"; };
-		1A2DA4380CB788DB00DE6823 /* debugConfig.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist; path = debugConfig.plist; sourceTree = "<group>"; };
+		1A2DA4380CB788DB00DE6823 /* debugConfig.plist */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; path = debugConfig.plist; sourceTree = "<group>"; };
 		1A2DFAF40D8925CB0055CF71 /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/OOEntityDebugInspectorModule.xib; sourceTree = "<group>"; };
 		1A2DFAF80D8925F70055CF71 /* OODebugInspectorModule.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OODebugInspectorModule.h; sourceTree = "<group>"; };
 		1A2DFAF90D8925F70055CF71 /* OODebugInspectorModule.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = OODebugInspectorModule.m; sourceTree = "<group>"; };
