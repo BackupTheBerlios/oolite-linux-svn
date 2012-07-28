@@ -48,7 +48,7 @@
 	else
 	{
 		pendingDesc = [[[pending allObjects] sortedArrayUsingSelector:@selector(caseInsensitiveCompare:)] componentsJoinedByString:@", "];
-		pendingDesc = [NSString stringWithFormat:@"%u: %@", [pending count], pendingDesc];
+		pendingDesc = [NSString stringWithFormat:@"%lu: %@", [pending count], pendingDesc];
 	}
 	
 	[_pendingMessagesField setStringValue:pendingDesc];

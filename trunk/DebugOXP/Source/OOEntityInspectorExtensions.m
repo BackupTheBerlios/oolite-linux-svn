@@ -100,7 +100,7 @@
 
 - (NSString *) inspRetainCountLine
 {
-	return [NSString stringWithFormat:@"%u", [self retainCount]];
+	return [NSString stringWithFormat:@"%lu", [self retainCount]];
 }
 
 

@@ -556,12 +556,7 @@
 				PRODUCT_NAME = Debug;
 				SYMROOT = ../build;
 				USER_HEADER_SEARCH_PATHS = "../src/Core/** ../src/Cocoa $(SYMROOT)/$(CONFIGURATION)/include/js";
-				WARNING_CFLAGS = (
-					"-Wall",
-					"-Wextra",
-					"-Wno-unused-parameter",
-					"-Wno-missing-field-initializers",
-				);
+				WARNING_CFLAGS = $OO_WARNING_FLAGS;
 				WRAPPER_EXTENSION = oxp;
 			};
 			name = Debug;
@@ -587,12 +582,7 @@
 				PRODUCT_NAME = Debug;
 				SYMROOT = ../build;
 				USER_HEADER_SEARCH_PATHS = "../src/Core/** ../src/Cocoa $(SYMROOT)/$(CONFIGURATION)/include/js";
-				WARNING_CFLAGS = (
-					"-Wall",
-					"-Wextra",
-					"-Wno-unused-parameter",
-					"-Wno-missing-field-initializers",
-				);
+				WARNING_CFLAGS = $OO_WARNING_FLAGS;
 				WRAPPER_EXTENSION = oxp;
 			};
 			name = TestRelease;
