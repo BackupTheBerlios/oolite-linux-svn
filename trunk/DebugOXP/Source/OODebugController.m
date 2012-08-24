@@ -53,7 +53,7 @@ SOFTWARE.
 static OODebugController *sSingleton = nil;
 
 
-@interface OODebugController (Private)
+@interface OODebugController ()
 
 - (void)insertDebugMenu;
 - (void)setUpLogMessageClassMenu;
@@ -457,10 +457,6 @@ static void SetDisplayLogMessagesInClassThroughJS(NSString *msgClass, BOOL displ
 	return [self respondsToSelector:action];
 }
 
-@end
-
-
-@implementation OODebugController (Private)
 
 - (void)insertDebugMenu
 {
