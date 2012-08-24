@@ -32,6 +32,7 @@ SOFTWARE.
 
 @interface OOShipDebugInspectorModule: OODebugInspectorModule
 {
+@private
 	IBOutlet NSTextField		*_primaryRoleField;
 	IBOutlet NSTextField		*_otherRolesField;
 	IBOutlet NSTextField		*_targetField;

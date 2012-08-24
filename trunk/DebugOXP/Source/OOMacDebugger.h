@@ -41,6 +41,7 @@ SOFTWARE.
 
 @interface OOMacDebugger: NSObject <OODebuggerInterface>
 {
+@private
 	OODebugMonitor						*_monitor;
 	
 	OOJavaScriptConsoleController		*_jsConsoleController;

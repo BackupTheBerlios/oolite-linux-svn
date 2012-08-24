@@ -37,6 +37,7 @@ SOFTWARE.
 
 @interface OOJavaScriptConsoleController: OOWeakRefObject
 {
+@private
 	IBOutlet NSWindow					*consoleWindow;
 	
 	// Container views for each pane.

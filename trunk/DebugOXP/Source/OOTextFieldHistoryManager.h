@@ -40,6 +40,7 @@ enum
 
 @interface OOTextFieldHistoryManager: NSObject
 {
+@private
 	IBOutlet NSTextField		*textField;
 	
 	NSMutableArray				*_history;			// History buffer, newest lines at end

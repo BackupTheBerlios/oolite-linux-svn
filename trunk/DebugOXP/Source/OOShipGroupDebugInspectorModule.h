@@ -30,7 +30,7 @@ SOFTWARE.
 #import "OODebugInspectorModule.h"
 
 
-@interface OOShipGroupDebugInspectorModule : OODebugInspectorModule
+@interface OOShipGroupDebugInspectorModule: OODebugInspectorModule
 {
 @private
 	IBOutlet NSTextField		*leaderField;

@@ -32,6 +32,7 @@ SOFTWARE.
 
 @interface OOObjectDebugInspectorModule: OODebugInspectorModule
 {
+@private
 	IBOutlet NSTextField		*_basicIdentityField;
 	IBOutlet NSTextField		*_secondaryIdentityField;
 	IBOutlet NSButton			*_targetSelfButton;
