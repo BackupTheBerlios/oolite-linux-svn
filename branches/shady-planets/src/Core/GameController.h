@@ -26,135 +26,107 @@ MA 02110-1301, USA.
 
 
 #import "OOCocoa.h"
+#import "OOFunctionAttributes.h"
+#import "OOFullScreenController.h"
+#import "OOMouseInteractionMode.h"
+
 
 #if OOLITE_HAVE_APPKIT
 #import <Quartz/Quartz.h>	// For PDFKit.
 #endif
 
-
-#define MODE_WINDOWED			100
-#define MODE_FULL_SCREEN		200
-
-#define DISPLAY_MIN_COLOURS		32
-#define DISPLAY_MIN_WIDTH		640
-#define DISPLAY_MIN_HEIGHT		480
-
-#ifndef GNUSTEP
-/*	OS X apps are permitted to assume 800x600 screens. Under OS X, we always
-	start up in windowed mode. Therefore, the default size fits an 800x600
-	screen and leaves space for the menu bar and title bar.
-*/
-#define DISPLAY_DEFAULT_WIDTH	800
-#define DISPLAY_DEFAULT_HEIGHT	540
-#define DISPLAY_DEFAULT_REFRESH	75
+#if OOLITE_MAC_OS_X && !OOLITE_64_BIT
+#define OOLITE_MAC_LEGACY_FULLSCREEN	1
 #endif
-
-#define DISPLAY_MAX_WIDTH		5040		// to cope with DaddyHoggy's 3840x1024 & up to 3 x 1680x1050 displays...
-#define DISPLAY_MAX_HEIGHT		1800
 
 #define MINIMUM_GAME_TICK		0.25
 // * reduced from 0.5s for tgape * //
 
 
-@class MyOpenGLView, OOProgressBar;
+@class MyOpenGLView, OOFullScreenController;
 
 
-#if OOLITE_MAC_OS_X
-#define kOODisplayWidth			((NSString *)kCGDisplayWidth)
-#define kOODisplayHeight		((NSString *)kCGDisplayHeight)
-#define kOODisplayRefreshRate	((NSString *)kCGDisplayRefreshRate)
-#define kOODisplayBitsPerPixel	((NSString *)kCGDisplayBitsPerPixel)
-#define kOODisplayIOFlags		((NSString *)kCGDisplayIOFlags)
-#else
-#define kOODisplayWidth			(@"Width")
-#define kOODisplayHeight		(@"Height")
-#define kOODisplayRefreshRate	(@"RefreshRate")
-#endif
+// TEMP: whether to use separate OOFullScreenController object, will hopefully be used for all builds soon.
+#define OO_USE_FULLSCREEN_CONTROLLER	OOLITE_MAC_OS_X
 
 
-@interface GameController : NSObject
+@interface GameController: NSObject
 {
+@private
 #if OOLITE_HAVE_APPKIT
 	IBOutlet NSTextField	*splashProgressTextField;
 	IBOutlet NSView			*splashView;
 	IBOutlet NSWindow		*gameWindow;
 	IBOutlet PDFView		*helpView;
-	IBOutlet OOProgressBar	*progressBar;
 	IBOutlet NSMenu			*dockMenu;
 #endif
-
-#if OOLITE_SDL
-	NSRect					fsGeometry;
-	MyOpenGLView			*switchView;
-#endif
+	
 	IBOutlet MyOpenGLView	*gameView;
-
+	
 	NSTimeInterval			last_timeInterval;
 	double					delta_t;
-
+	
 	int						my_mouse_x, my_mouse_y;
 
 	NSString				*playerFileDirectory;
 	NSString				*playerFileToLoad;
 	NSMutableArray			*expansionPathsToInclude;
-
+	
 	NSTimer					*timer;
 	
 	NSDate					*_splashStart;
-
-	/*  GDC example code */
-
+	
+	SEL						pauseSelector;
+	NSObject				*pauseTarget;
+	
+	BOOL					gameIsPaused;
+	
+	OOMouseInteractionMode	_mouseMode;
+	OOMouseInteractionMode	_resumeMode;
+	
+// Fullscreen mode stuff.
+#if OO_USE_FULLSCREEN_CONTROLLER
+	OOFullScreenController	*_fullScreenController;
+#elif OOLITE_SDL
+	NSRect					fsGeometry;
+	MyOpenGLView			*switchView;
+	
 	NSMutableArray			*displayModes;
-
+	
 	unsigned int			width, height;
 	unsigned int			refresh;
 	BOOL					fullscreen;
 	NSDictionary			*originalDisplayMode;
 	NSDictionary			*fullscreenDisplayMode;
-
-#if OOLITE_MAC_OS_X
-	NSOpenGLContext			*fullScreenContext;
-#endif
-
+	
 	BOOL					stayInFullScreenMode;
-
-	/*  end of GDC */
-
-	SEL						pauseSelector;
-	NSObject				*pauseTarget;
-
-	BOOL					gameIsPaused;
+#endif
 }
 
-+ (id)sharedController;
++ (GameController *) sharedController;
 
-- (void) applicationDidFinishLaunching: (NSNotification *)notification;
+- (void) applicationDidFinishLaunching:(NSNotification *)notification;
+
 - (BOOL) isGamePaused;
-- (void) pauseGame;
-- (void) unpauseGame;
+- (void) setGamePaused:(BOOL)value;
+
+- (OOMouseInteractionMode) mouseInteractionMode;
+- (void) setMouseInteractionMode:(OOMouseInteractionMode)mode;
+- (void) setMouseInteractionModeForFlight;	// Chooses mouse control mode appropriately.
+- (void) setMouseInteractionModeForUIWithMouseInteraction:(BOOL)interaction;
+
+- (void) performGameTick:(id)sender;
 
 #if OOLITE_HAVE_APPKIT
-- (IBAction) goFullscreen:(id)sender;
 - (IBAction) showLogAction:(id)sender;
 - (IBAction) showLogFolderAction:(id)sender;
 - (IBAction) showSnapshotsAction:(id)sender;
 - (IBAction) showAddOnsAction:(id)sender;
-- (void) changeFullScreenResolution;
 - (void) recenterVirtualJoystick;
-#elif OOLITE_SDL
-- (void) setFullScreenMode:(BOOL)fsm;
 #endif
-- (void) exitFullScreenMode;
-- (BOOL) inFullScreenMode;
 
-- (void) pauseFullScreenModeToPerform:(SEL) selector onTarget:(id) target;
 - (void) exitAppWithContext:(NSString *)context;
 - (void) exitAppCommandQ;
-
-- (BOOL) setDisplayWidth:(unsigned int) d_width Height:(unsigned int)d_height Refresh:(unsigned int) d_refresh;
-- (NSDictionary *) findDisplayModeForWidth:(unsigned int)d_width Height:(unsigned int) d_height Refresh:(unsigned int) d_refresh;
-- (NSArray *) displayModes;
-- (OOUInteger) indexOfCurrentDisplayMode;
 
 - (NSString *) playerFileToLoad;
 - (void) setPlayerFileToLoad:(NSString *)filename;
@@ -167,12 +139,11 @@ MA 02110-1301, USA.
 - (void) beginSplashScreen;
 - (void) logProgress:(NSString *)message;
 #if OO_DEBUG
-- (void) debugLogProgress:(NSString *)format, ...;
-- (void) debugLogProgress:(NSString *)format arguments:(va_list)arguments;
-- (void) debugPushProgressMessage:(NSString *)format, ...;
+- (void) debugLogProgress:(NSString *)format, ...  OO_TAKES_FORMAT_STRING(1, 2);
+- (void) debugLogProgress:(NSString *)format arguments:(va_list)arguments  OO_TAKES_FORMAT_STRING(1, 0);
+- (void) debugPushProgressMessage:(NSString *)format, ...  OO_TAKES_FORMAT_STRING(1, 2);
 - (void) debugPopProgressMessage;
 #endif
-- (void) setProgressBarValue:(float)value;	// Negative for hidden
 - (void) endSplashScreen;
 
 - (void) startAnimationTimer;
@@ -186,6 +157,37 @@ MA 02110-1301, USA.
 - (void)setUpBasicOpenGLStateWithSize:(NSSize)viewSize;
 
 - (NSURL *) snapshotsURLCreatingIfNeeded:(BOOL)create;
+
+@end
+
+
+@interface GameController (FullScreen)
+
+#if OO_USE_FULLSCREEN_CONTROLLER
+#if OOLITE_MAC_OS_X
+- (IBAction) toggleFullScreenAction:(id)sender;
+#endif
+
+/*	NOTE: on 32-bit Mac OS X (OOLITE_MAC_LEGACY_FULLSCREEN),
+	setFullScreenMode:YES takes over the event loop and doesn't return until
+	exiting full screen mode.
+*/
+- (void) setFullScreenMode:(BOOL)value;
+#endif
+
+- (void) exitFullScreenMode;	// FIXME: should be setFullScreenMode:NO
+- (BOOL) inFullScreenMode;
+
+- (BOOL) setDisplayWidth:(unsigned int) d_width Height:(unsigned int)d_height Refresh:(unsigned int) d_refresh;
+- (NSDictionary *) findDisplayModeForWidth:(unsigned int)d_width Height:(unsigned int) d_height Refresh:(unsigned int) d_refresh;
+- (NSArray *) displayModes;
+- (OOUInteger) indexOfCurrentDisplayMode;
+
+- (void) pauseFullScreenModeToPerform:(SEL) selector onTarget:(id) target;
+
+
+// Internal use only.
+- (void) setUpDisplayModes;
 
 @end
 

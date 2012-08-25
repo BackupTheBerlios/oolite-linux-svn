@@ -34,7 +34,9 @@ SOFTWARE.
 
 @interface OOShipRegistry: NSObject
 {
+@private
 	NSDictionary			*_shipData;
+	NSDictionary			*_effectData;
 	NSArray					*_demoShips;
 	NSArray					*_playerShips;
 	NSDictionary			*_probabilitySets;
@@ -45,6 +47,7 @@ SOFTWARE.
 + (void) reload;
 
 - (NSDictionary *) shipInfoForKey:(NSString *)key;
+- (NSDictionary *) effectInfoForKey:(NSString *)key;
 - (NSDictionary *) shipyardInfoForKey:(NSString *)key;
 - (OOProbabilitySet *) probabilitySetForRole:(NSString *)role;
 

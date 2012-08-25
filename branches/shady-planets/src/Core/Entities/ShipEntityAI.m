@@ -48,6 +48,8 @@
 
 @interface ShipEntity (OOAIPrivate)
 
+- (void) checkFoundTarget;
+
 - (BOOL)performHyperSpaceExitReplace:(BOOL)replace;
 - (BOOL)performHyperSpaceExitReplace:(BOOL)replace toSystem:(OOSystemID)systemID;
 
@@ -121,6 +123,9 @@
 
 - (void) performFlee;
 
+- (void) performScriptedAI;
+- (void) performScriptedAttackAI;
+
 - (void) requestDockingCoordinates;
 
 - (void) getWitchspaceEntryCoordinates;
@@ -161,7 +166,6 @@
 
 - (void) performHyperSpaceExit;
 - (void) performHyperSpaceExitWithoutReplacing;
-- (void) wormholeEscorts;
 - (void) wormholeGroup;
 - (void) wormholeEntireGroup;
 
@@ -249,15 +253,15 @@
 
 - (void) enterPlayerWormhole;
 
-- (void) enterTargetWormhole;
-
 - (void) scriptActionOnTarget:(NSString *) action;
 
 - (void) sendScriptMessage:(NSString *)message;
 
+- (void) ai_throwSparks;
+
 - (void) explodeSelf;
 
-- (void) ai_throwSparks;
+- (void) ai_debugMessage:(NSString *)message;
 
 // racing code.
 - (void) targetFirstBeaconWithCode:(NSString *) code;
@@ -292,7 +296,7 @@
 - (void) scanForHostiles
 {
 	/*-- Locates all the ships in range targeting the receiver and chooses the nearest --*/
-	found_target = NO_TARGET;
+	DESTROY(_foundTarget);
 	
 	[self checkScanner];
 	unsigned i;
@@ -305,13 +309,12 @@
 			&& ([thing isThargoid] || (([thing primaryTarget] == self) && [thing hasHostileTarget]) || [thing isDefenseTarget:self])
 			&& ![thing isCloaked])
 		{
-			found_target = [thing universalID];
+			[self setFoundTarget:thing];
 			found_d2 = d2;
 		}
 	}
 	
-	if (found_target != NO_TARGET)  [shipAI message:@"TARGET_FOUND"];
-	else  [shipAI message:@"NOTHING_FOUND"];
+	[self checkFoundTarget];
 }
 
 
@@ -346,6 +349,78 @@
 		IsHostileAgainstTargetPredicate, self
 	};
 	[self scanForNearestShipWithPredicate:ANDPredicate parameter:&param];
+}
+
+
+- (void) enterTargetWormhole
+{
+	WormholeEntity *whole = nil;
+	ShipEntity		*targEnt = [self primaryTarget];
+	double found_d2 = scannerRange * scannerRange;
+	
+	if (targEnt && (distance2(position, [targEnt position]) < found_d2))
+	{
+		if ([targEnt isWormhole])
+			whole = (WormholeEntity *)targEnt;
+		else if ([targEnt isPlayer])
+			whole = [PLAYER wormhole];
+	}
+
+	if (!whole)
+	{
+		// locate nearest wormhole
+		int				ent_count =		UNIVERSE->n_entities;
+		Entity**		uni_entities =	UNIVERSE->sortedEntities;	// grab the public sorted list
+		WormholeEntity*	wormholes[ent_count];
+		int i;
+		int wh_count = 0;
+		for (i = 0; i < ent_count; i++)
+			if (uni_entities[i]->isWormhole)
+				wormholes[wh_count++] = [(WormholeEntity *)uni_entities[i] retain];
+		//
+		//double found_d2 = scannerRange * scannerRange;
+		for (i = 0; i < wh_count ; i++)
+		{
+			WormholeEntity *wh = wormholes[i];
+			double d2 = distance2(position, wh->position);
+			if (d2 < found_d2)
+			{
+				whole = wh;
+				found_d2 = d2;
+			}
+			[wh release];
+		}
+	}
+	
+	[self enterWormhole:whole replacing:NO];
+}
+
+
+// FIXME: resolve this stuff.
+- (void) wormholeEscorts
+{
+	NSEnumerator		*shipEnum = nil;
+	ShipEntity			*ship = nil;
+	NSString			*context = nil;
+	WormholeEntity		*whole = nil;
+	
+	whole = [self primaryTarget];
+	if (![whole isWormhole])  return;
+	
+#ifndef NDEBUG
+	context = [NSString stringWithFormat:@"%@ wormholeEscorts", [self shortDescription]];
+#endif
+	
+	for (shipEnum = [self escortEnumerator]; (ship = [shipEnum nextObject]); )
+	{
+		[ship addTarget:whole];
+		[ship reactToAIMessage:@"ENTER WORMHOLE" context:context];
+	}
+	
+	// We now have no escorts..
+	[_escortGroup release];
+	_escortGroup = nil;
+	
 }
 
 @end
@@ -475,10 +550,10 @@
 
 - (void) setTargetToPrimaryAggressor
 {
-	Entity *primeAggressor = [UNIVERSE entityForUniversalID:primaryAggressor];
+	Entity *primeAggressor = [self primaryAggressor];
 	if (!primeAggressor)
 		return;
-	if (primaryTarget == primaryAggressor)
+	if ([self primaryTarget] == primeAggressor)
 		return;
 	
 	// a more considered approach here:
@@ -490,28 +565,27 @@
 		[self addDefenseTarget:(ShipEntity*)primeAggressor];
 		return;
 	}
-	
 	// react only if the primary aggressor is not a friendly ship, else ignore it
 	if ([primeAggressor isShip] && ![(ShipEntity *)primeAggressor isFriendlyTo:self])
 	{
 		// inform our old target of our new target
 		//
-		Entity *primeTarget = [UNIVERSE entityForUniversalID:primaryTarget];
+		Entity *primeTarget = [self primaryTarget];
 		if ((primeTarget)&&(primeTarget->isShip))
 		{
-			ShipEntity *currentShip = [UNIVERSE entityForUniversalID:primaryTarget];
-			[[currentShip getAI] message:[NSString stringWithFormat:@"%@ %d %d", AIMS_AGGRESSOR_SWITCHED_TARGET, universalID, primaryAggressor]];
+			ShipEntity *currentShip = [self primaryTarget];
+			[[currentShip getAI] message:[NSString stringWithFormat:@"%@ %d %d", AIMS_AGGRESSOR_SWITCHED_TARGET, universalID, [[self primaryAggressor] universalID]]];
 		}
 		
 		// okay, so let's now target the aggressor
-		[self addTarget:[UNIVERSE entityForUniversalID:primaryAggressor]];
+		[self addTarget:[self primaryAggressor]];
 	}
 }
 
 
 - (void) addPrimaryAggressorAsDefenseTarget
 {
-	Entity *primeAggressor = [UNIVERSE entityForUniversalID:primaryAggressor];
+	Entity *primeAggressor = [self primaryAggressor];
 	if (!primeAggressor)
 		return;
 	if ([self isDefenseTarget:primeAggressor])
@@ -550,7 +624,7 @@
 	[self checkScanner];
 	
 	found_d2 = scannerRange * scannerRange;
-	found_target = NO_TARGET;
+	DESTROY(_foundTarget);
 	
 	for (i = 0; i < n_scanned_ships ; i++)
 	{
@@ -566,12 +640,11 @@
 			if (d2 < found_d2)
 			{
 				found_d2 = d2;
-				found_target = [ship universalID];
+				[self setFoundTarget:ship];
 			}
 		}
 	}
-	if (found_target != NO_TARGET)  [shipAI message:@"TARGET_FOUND"];
-	else  [shipAI message:@"NOTHING_FOUND"];
+	[self checkFoundTarget];
 }
 
 
@@ -581,15 +654,15 @@
 	
 	//-- Locates one of the merchantman in range.
 	[self checkScanner];
-	OOUniversalID		ids_found[n_scanned_ships];
+	ShipEntity*		ids_found[n_scanned_ships];
 	
 	n_found = 0;
-	found_target = NO_TARGET;
+	DESTROY(_foundTarget);
 	for (i = 0; i < n_scanned_ships ; i++)
 	{
 		ShipEntity *ship = scanned_ships[i];
 		if (([ship status] != STATUS_DEAD) && ([ship status] != STATUS_DOCKED) && [ship isPirateVictim] && ![ship isCloaked])
-			ids_found[n_found++] = ship->universalID;
+			ids_found[n_found++] = ship;
 	}
 	if (n_found == 0)
 	{
@@ -598,7 +671,7 @@
 	else
 	{
 		i = ranrot_rand() % n_found;	// pick a number from 0 -> (n_found - 1)
-		found_target = ids_found[i];
+		[self setFoundTarget:ids_found[i]];
 		[shipAI message:@"TARGET_FOUND"];
 	}
 }
@@ -633,7 +706,7 @@
 	[self checkScanner];
 	
 	double found_d2 = scannerRange * scannerRange;
-	found_target = NO_TARGET;
+	DESTROY(_foundTarget);
 	unsigned i;
 	for (i = 0; i < n_scanned_ships; i++)
 	{
@@ -646,19 +719,12 @@
 				if (d2 < found_d2)
 				{
 					found_d2 = d2;
-					found_target = other->universalID;
+					[self setFoundTarget:other];
 				}
 			}
 		}
 	}
-	if (found_target != NO_TARGET)
-	{
-		[shipAI message:@"TARGET_FOUND"];
-	}
-	else
-	{
-		[shipAI message:@"NOTHING_FOUND"];
-	}
+	[self checkFoundTarget];
 }
 
 
@@ -673,23 +739,22 @@
 	//
 	[self checkScanner];
 	//
-	OOUniversalID thing_uids_found[16];
+	ShipEntity* thing_uids_found[16];
 	unsigned things_found = 0;
-	found_target = NO_TARGET;
+	DESTROY(_foundTarget);
 	unsigned i;
 	for (i = 0; (i < n_scanned_ships)&&(things_found < 16) ; i++)
 	{
 		ShipEntity *other = scanned_ships[i];
 		if ([other scanClass] == CLASS_CARGO && [other cargoType] != CARGO_NOT_CARGO && [other status] != STATUS_BEING_SCOOPED)
 		{
-			found_target = [other universalID];
-			thing_uids_found[things_found++] = found_target;
+			thing_uids_found[things_found++] = other;
 		}
 	}
 	
 	if (things_found != 0)
 	{
-		found_target = thing_uids_found[ranrot_rand() % things_found];
+		[self setFoundTarget:thing_uids_found[ranrot_rand() % things_found]];
 		[shipAI message:@"TARGET_FOUND"];
 	}
 	else
@@ -699,17 +764,21 @@
 
 - (void) setTargetToFoundTarget
 {
-	if ([UNIVERSE entityForUniversalID:found_target])
-		[self addTarget:[UNIVERSE entityForUniversalID:found_target]];
+	if ([self foundTarget] != nil)
+	{
+		[self addTarget:[self foundTarget]];
+	}
 	else
-		[shipAI message:@"TARGET_LOST"]; // to prefent the ship going for a wrong, previous target. Should not be a reactToMessage.
+	{
+		[shipAI message:@"TARGET_LOST"]; // to prevent the ship going for a wrong, previous target. Should not be a reactToMessage.
+	}
 }
 
 
 - (void) addFoundTargetAsDefenseTarget
 {
-	Entity* fTarget = [UNIVERSE entityForUniversalID:found_target];
-	if (!fTarget)
+	Entity* fTarget = [self foundTarget];
+	if (fTarget != nil)
 	{
 		if ([fTarget isShip] && ![(ShipEntity *)fTarget isFriendlyTo:self])
 		{
@@ -755,6 +824,20 @@
 
 	[self setEvasiveJink:400.0];
 
+	frustration = 0.0;
+}
+
+
+- (void) performScriptedAI
+{
+	behaviour = BEHAVIOUR_SCRIPTED_AI;
+	frustration = 0.0;
+}
+
+
+- (void) performScriptedAttackAI
+{
+	behaviour = BEHAVIOUR_SCRIPTED_ATTACK_AI;
 	frustration = 0.0;
 }
 
@@ -864,20 +947,20 @@
 		
 		for (policeEnum = [[self group] mutationSafeEnumerator]; (police = [policeEnum nextObject]); )
 		{
-			[police setFound_target:hunter];
+			[police setFoundTarget:hunter];
 			[police setPrimaryAggressor:hunter];
 		}
 	}
 	
+	// if I'm a copper and you're not, then mark the other as an offender!
+	if ([self isPolice] && ![hunter isPolice])  [hunter markAsOffender:64 withReason:kOOLegalStatusReasonAttackedPolice];
+
 	if ([self hasECM])
 	{
 		// use the ECM and battle on
 		
 		[self setPrimaryAggressor:hunter];	// lets get them now for that!
-		found_target = primaryAggressor;
-		
-		// if I'm a copper and you're not, then mark the other as an offender!
-		if ([self isPolice] && ![hunter isPolice])  [hunter markAsOffender:64 withReason:kOOLegalStatusReasonAttackedPolice];
+		[self setFoundTarget:hunter];
 		
 		[self fireECM];
 		return;
@@ -960,7 +1043,7 @@
 
 - (void) checkTargetLegalStatus
 {
-	ShipEntity  *other_ship = [UNIVERSE entityForUniversalID:primaryTarget];
+	ShipEntity  *other_ship = [self primaryTarget];
 	if (!other_ship)
 	{
 		[shipAI message:@"NO_TARGET"];
@@ -1025,7 +1108,7 @@
 
 - (void) setDestinationToTarget
 {
-	Entity *the_target = [UNIVERSE entityForUniversalID:primaryTarget];
+	Entity *the_target = [self primaryTarget];
 	if (the_target)
 		destination = the_target->position;
 }
@@ -1033,7 +1116,7 @@
 
 - (void) setDestinationWithinTarget
 {
-	Entity *the_target = [UNIVERSE entityForUniversalID:primaryTarget];
+	Entity *the_target = [self primaryTarget];
 	if (the_target)
 	{
 		Vector pos = the_target->position;
@@ -1145,7 +1228,7 @@
 	for (i = 0; i < n_scanned_ships ; i++)
 	{
 		ShipEntity *ship = scanned_ships[i];
-		if (([ship primaryTarget] == self && [ship hasHostileTarget]) || [ship isMine] || ([ship isThargoid] != [self isThargoid]))
+		if (![ship isCloaked] && (([ship primaryTarget] == self && [ship hasHostileTarget]) || [ship isMine] || ([ship isThargoid] != [self isThargoid])))
 		{
 			if (![self isDefenseTarget:ship])
 			{
@@ -1166,7 +1249,7 @@
 	if ([UNIVERSE sun] == nil)
 		gov_factor = 1.0;
 	//
-	found_target = NO_TARGET;
+	DESTROY(_foundTarget);
 	
 	// find the worst offender on the scanner
 	//
@@ -1178,7 +1261,7 @@
 	for (i = 0; i < n_scanned_ships ; i++)
 	{
 		ShipEntity *ship = scanned_ships[i];
-		if ((ship->scanClass != CLASS_CARGO)&&([ship status] != STATUS_DEAD)&&([ship status] != STATUS_DOCKED))
+		if ((ship->scanClass != CLASS_CARGO)&&([ship status] != STATUS_DEAD)&&([ship status] != STATUS_DOCKED)&& ![ship isCloaked])
 		{
 			GLfloat	d2 = distance2_scanned_ships[i];
 			float	legal_factor = [ship legalStatus] * gov_factor;
@@ -1187,17 +1270,14 @@
 			{
 				if (group == nil || group != [ship group])  // fellows with bounty can't be offenders
 				{
-					found_target = [ship universalID];
+					[self setFoundTarget:ship];
 					worst_legal_factor = legal_factor;
 				}
 			}
 		}
 	}
 	
-	if (found_target != NO_TARGET)
-		[shipAI message:@"TARGET_FOUND"];
-	else
-		[shipAI message:@"NOTHING_FOUND"];
+	[self checkFoundTarget];
 }
 
 
@@ -1220,7 +1300,9 @@
 - (void) setDestinationToStationBeacon
 {
 	if ([UNIVERSE station])
-		destination = [[UNIVERSE station] getBeaconPosition];
+	{
+		destination = [[UNIVERSE station] beaconPosition];
+	}
 }
 
 
@@ -1239,34 +1321,6 @@
 - (void) disengageAutopilot
 {
 	OOLogERR(@"ai.invalid.notPlayer", @"Error in %@:%@, AI method endAutoPilot is only applicable to the player.", [shipAI name], [shipAI state]);
-}
-
-
-// FIXME: resolve this stuff.
-- (void) wormholeEscorts
-{
-	NSEnumerator		*shipEnum = nil;
-	ShipEntity			*ship = nil;
-	NSString			*context = nil;
-	WormholeEntity		*whole = nil;
-	
-	whole = [self primaryTarget];
-	if (![whole isWormhole])  return;
-	
-#ifndef NDEBUG
-	context = [NSString stringWithFormat:@"%@ wormholeEscorts", [self shortDescription]];
-#endif
-	
-	for (shipEnum = [self escortEnumerator]; (ship = [shipEnum nextObject]); )
-	{
-		[ship addTarget:whole];
-		[ship reactToAIMessage:@"ENTER WORMHOLE" context:context];
-	}
-	
-	// We now have no escorts..
-	[_escortGroup release];
-	_escortGroup = nil;
-	
 }
 
 
@@ -1311,9 +1365,9 @@
 	/*-- Locates all the stations, bounty hunters and police ships in range and tells them that you are under attack --*/
 	
 	[self checkScanner];
-	found_target = NO_TARGET;
+	DESTROY(_foundTarget);
 	
-	ShipEntity	*aggressor_ship = [UNIVERSE entityForUniversalID:primaryAggressor];
+	ShipEntity	*aggressor_ship = (ShipEntity*)[self primaryAggressor];
 	if (aggressor_ship == nil)  return;
 	
 	// don't send too many distress messages at once, space them out semi-randomly
@@ -1328,23 +1382,30 @@
 	for (i = 0; i < n_scanned_ships; i++)
 	{
 		ShipEntity*	ship = scanned_ships[i];
+
+    // dump cargo if energy is low
+		if (!is_buoy && [self primaryAggressor] == ship && energy < 0.375 * maxEnergy)
+		{
+			[self ejectCargo];
+			[self performFlee];
+		}
 		
 		// tell it!
 		if (ship->isPlayer)
 		{
-			if (!is_buoy && primaryAggressor == [ship universalID] && energy < 0.375 * maxEnergy)
+			if (!is_buoy && [self primaryAggressor] == ship && energy < 0.375 * maxEnergy)
 			{
 				[self sendExpandedMessage:ExpandDescriptionForCurrentSystem(@"[beg-for-mercy]") toShip:ship];
-				[self ejectCargo];
-				[self performFlee];
 			}
-			else
+			else if ([self bounty] == 0)
 			{
+				// only send distress message to player if plausibly sending
+				// one more generally
 				[self sendExpandedMessage:ExpandDescriptionForCurrentSystem(distress_message) toShip:ship];
 			}
 			
 			// reset the thanked_ship_id
-			thanked_ship_id = NO_TARGET;
+			DESTROY(_thankedShip);
 		}
 		else if ([self bounty] == 0 && [ship crew]) // Only clean ships can have their distress calls accepted
 		{
@@ -1352,6 +1413,8 @@
 			
 			// we only can send distressMessages to ships that are known to have a "ACCEPT_DISTRESS_CALL" reaction
 			// in their AI, or they might react wrong on the added found_target.
+
+			// FIXME: this test only works with core AIs
 			if (ship->isStation || [ship hasPrimaryRole:@"police"] || [ship hasPrimaryRole:@"hunter"])
 			{
 				[ship acceptDistressMessageFrom:self];
@@ -1400,7 +1463,7 @@
 - (void) scanForNonThargoid
 {
 	/*-- Locates all the non thargoid ships in range and chooses the nearest --*/
-	found_target = NO_TARGET;
+	DESTROY(_foundTarget);
 	
 	[self checkScanner];
 	unsigned i;
@@ -1411,14 +1474,13 @@
 		GLfloat d2 = distance2_scanned_ships[i];
 		if (([thing scanClass] != CLASS_CARGO) && ([thing status] != STATUS_DOCKED) && ![thing isThargoid] && ![thing isCloaked] && (d2 < found_d2))
 		{
-			found_target = [thing universalID];
+			[self setFoundTarget:thing];
 			if ([thing isPlayer]) d2 = 0.0;   // prefer the player
 			found_d2 = d2;
 		}
 	}
-	
-	if (found_target != NO_TARGET)  [shipAI message:@"TARGET_FOUND"];
-	else  [shipAI message:@"NOTHING_FOUND"];
+
+	[self checkFoundTarget];
 }
 
 
@@ -1437,9 +1499,9 @@
 	{
 		// we lost the old mother, search for a new one
 		[self scanForNearestShipHavingRole:@"thargoid-mothership"]; // the scan will send further AI messages.
-		if (found_target != NO_TARGET && [UNIVERSE entityForUniversalID:found_target])
+		if ([self foundTarget] != nil)
 		{
-			mother = [UNIVERSE entityForUniversalID:found_target];
+			mother = (ShipEntity*)[self foundTarget];
 			[self setOwner:mother];
 			if ([mother group] != [mother escortGroup]) // avoid adding thargon to an escort group.
 			{
@@ -1464,14 +1526,14 @@
 		}
 		if ([other isDefenseTarget:self])
 		{
-			[other removeDefenseTargetByID:self];
+			[other removeDefenseTarget:self];
 		}
 	}
 	// now we're just a bunch of alien artefacts!
 	scanClass = CLASS_CARGO;
 	reportAIMessages = NO;
 	[shipAI setStateMachine:@"dumbAI.plist"];
-	primaryTarget = NO_TARGET;
+	DESTROY(_primaryTarget);
 	[self setSpeed: 0.0];
 	[self setGroup:nil];
 }
@@ -1486,18 +1548,20 @@
 
 - (void) fightOrFleeHostiles
 {
-	[self addDefenseTarget:[UNIVERSE entityForUniversalID:found_target]];
+	[self addDefenseTarget:[self foundTarget]];
 	
 	if ([self hasEscorts])
 	{
-		if (found_target == last_escort_target)
+		Entity *leTarget = [self lastEscortTarget];
+		if (leTarget != nil)
 		{
+			[self setFoundTarget:leTarget];
 			[shipAI message:@"FLEEING"];
 			return;
 		}
 		
-		primaryAggressor = found_target;
-		primaryTarget = found_target;
+		[self setPrimaryAggressor:[self foundTarget]];
+		[self addTarget:[self foundTarget]];
 		[self deployEscorts];
 		[shipAI message:@"DEPLOYING_ESCORTS"];
 		[shipAI message:@"FLEEING"];
@@ -1509,8 +1573,8 @@
 	{
 		if (randf() < 0.50)
 		{
-			primaryAggressor = found_target;
-			primaryTarget = found_target;
+			[self setPrimaryAggressor:[self foundTarget]];
+			[self addTarget:[self foundTarget]];
 			[self fireMissile];
 			[shipAI message:@"FLEEING"];
 			return;
@@ -1520,7 +1584,7 @@
 	// consider fighting
 	if (energy > maxEnergy * 0.80)
 	{
-		primaryAggressor = found_target;
+		[self setPrimaryAggressor:[self foundTarget]];
 		//[self performAttack];
 		[shipAI message:@"FIGHTING"];
 		return;
@@ -1532,7 +1596,7 @@
 
 - (void) suggestEscort
 {
-	ShipEntity   *mother = [UNIVERSE entityForUniversalID:primaryTarget];
+	ShipEntity   *mother = [self primaryTarget];
 	if (mother)
 	{
 #ifndef NDEBUG
@@ -1548,8 +1612,8 @@
 			if (([mother legalStatus] > 0)&&(bounty <= 0))
 			{
 				int extra = 1 | (ranrot_rand() & 15);
-				[mother setBounty: [mother legalStatus] + extra withReason:kOOLegalStatusReasonAssistingOffender];
-				[self setBounty:(bounty+extra) withReason:kOOLegalStatusReasonAssistingOffender];
+//				[mother setBounty: [mother legalStatus] + extra withReason:kOOLegalStatusReasonAssistingOffender];
+				[self markAsOffender:extra withReason:kOOLegalStatusReasonAssistingOffender];
 				//				bounty += extra;	// obviously we're dodgier than we thought!
 			}
 			
@@ -1626,11 +1690,11 @@
 	NSEnumerator		*shipEnum = nil;
 	ShipEntity			*target = nil, *ship = nil;
 	
-	if (primaryTarget == NO_TARGET) return;
+	if ([self primaryTarget] == nil) return;
 	
 	if ([self group] == nil)		// ship is alone!
 	{
-		found_target = primaryTarget;
+		[self setFoundTarget:[self primaryTarget]];
 		[shipAI reactToMessage:@"GROUP_ATTACK_TARGET" context:@"groupAttackTarget"];
 		return;
 	}
@@ -1641,7 +1705,7 @@
 	NSArray *groupMembers = [[self group] memberArray];
 	for (shipEnum = [groupMembers objectEnumerator]; (ship = [shipEnum nextObject]); )
 	{
-		[ship setFound_target:target];
+		[ship setFoundTarget:target];
 		[ship reactToAIMessage:@"GROUP_ATTACK_TARGET" context:@"groupAttackTarget"];
 		if ([ship escortGroup] != [ship group] && [[ship escortGroup] count] > 1) // Ship has a seperate escort group.
 		{
@@ -1650,7 +1714,7 @@
 			NSArray			*escortMembers = [[ship escortGroup] memberArrayExcludingLeader];
 			for (shipEnum = [escortMembers objectEnumerator]; (escort = [shipEnum nextObject]); )
 			{
-				[escort setFound_target:target];
+				[escort setFoundTarget:target];
 				[escort reactToAIMessage:@"GROUP_ATTACK_TARGET" context:@"groupAttackTarget"];
 			}
 		}
@@ -1661,25 +1725,25 @@
 - (void) scanForFormationLeader
 {
 	//-- Locates the nearest suitable formation leader in range --//
-	found_target = NO_TARGET;
+	DESTROY(_foundTarget);
 	[self checkScanner];
 	unsigned i;
 	GLfloat	found_d2 = scannerRange * scannerRange;
 	for (i = 0; i < n_scanned_ships; i++)
 	{
 		ShipEntity *ship = scanned_ships[i];
-		if ((ship != self) && (!ship->isPlayer) && (ship->scanClass == scanClass) && [ship primaryTarget] != self)	// look for alike
+		if ((ship != self) && (!ship->isPlayer) && (ship->scanClass == scanClass) && [ship primaryTarget] != self && ![ship isCloaked])	// look for alike
 		{
 			GLfloat d2 = distance2_scanned_ships[i];
 			if ((d2 < found_d2) && [ship canAcceptEscort:self])
 			{
 				found_d2 = d2;
-				found_target = ship->universalID;
+				[self setFoundTarget:ship];
 			}
 		}
 	}
 	
-	if (found_target != NO_TARGET)  [shipAI message:@"TARGET_FOUND"];
+	if ([self foundTarget] != nil)  [shipAI message:@"TARGET_FOUND"];
 	else
 	{
 		[shipAI message:@"NOTHING_FOUND"];
@@ -1767,7 +1831,7 @@
 			if (randf() < .25)
 			{
 				// consider docking
-				targetStation = [the_station universalID];
+				[self setTargetStation:the_station];
 				[self setAITo:@"dockingAI.plist"];
 				return;
 			}
@@ -1905,22 +1969,22 @@
 
 - (void) storeTarget
 {
-	Entity	*target = [UNIVERSE entityForUniversalID:primaryTarget];
+	Entity	*target = [self primaryTarget];
 	
 	if (target)
 	{
-		remembered_ship = primaryTarget;
+		[self setRememberedShip:target];
 	}
 	else
 	{
-		remembered_ship = NO_TARGET;
+		DESTROY(_rememberedShip);
 	}
 	
 }
 
 - (void) recallStoredTarget
 {
-	ShipEntity	*oldTarget = [UNIVERSE entityForUniversalID:remembered_ship];
+	ShipEntity	*oldTarget = (ShipEntity*)[self rememberedShip];
 	BOOL	found = NO;
 	
 	if (oldTarget && ![oldTarget isCloaked])
@@ -1934,12 +1998,12 @@
 	
 	if (found)
 	{
-		found_target = remembered_ship;
+		[self setFoundTarget:oldTarget];
 		[shipAI message:@"TARGET_FOUND"];
 	}
 	else
 	{
-		if (oldTarget == nil) remembered_ship = NO_TARGET; // ship no longer exists
+		if (oldTarget == nil) DESTROY(_rememberedShip); // ship no longer exists
 		[shipAI message:@"NOTHING_FOUND"];
 	}
 	
@@ -1951,7 +2015,7 @@
 	
 	// find boulders then asteroids within range
 	//
-	found_target = NO_TARGET;
+	DESTROY(_foundTarget);
 	[self checkScanner];
 	unsigned i;
 	GLfloat found_d2 = scannerRange * scannerRange;
@@ -1963,12 +2027,12 @@
 			GLfloat d2 = distance2_scanned_ships[i];
 			if (d2 < found_d2)
 			{
-				found_target = thing->universalID;
+				[self setFoundTarget:thing];
 				found_d2 = d2;
 			}
 		}
 	}
-	if (found_target == NO_TARGET)
+	if ([self foundTarget] == nil)
 	{
 		for (i = 0; i < n_scanned_ships; i++)
 		{
@@ -1978,15 +2042,14 @@
 				GLfloat d2 = distance2_scanned_ships[i];
 				if (d2 < found_d2)
 				{
-					found_target = thing->universalID;
+					[self setFoundTarget:thing];
 					found_d2 = d2;
 				}
 			}
 		}
 	}
 	
-	if (found_target != NO_TARGET)  [shipAI message:@"TARGET_FOUND"];
-	else  [shipAI message:@"NOTHING_FOUND"];
+	[self checkFoundTarget];
 }
 
 
@@ -2033,7 +2096,7 @@
 	}
 	
 	/*-- Locates all the ships in range targeting the mother ship and chooses the nearest/biggest --*/
-	found_target = NO_TARGET;
+	DESTROY(_foundTarget);
 	[self checkScanner];
 	unsigned i;
 	GLfloat found_d2 = scannerRange * scannerRange;
@@ -2043,18 +2106,17 @@
 		ShipEntity *thing = scanned_ships[i];
 		GLfloat d2 = distance2_scanned_ships[i];
 		GLfloat e1 = [thing energy];
-		if ((d2 < found_d2) && (([thing isThargoid] && ![mother isThargoid]) || (([thing primaryTarget] == mother) && [thing hasHostileTarget])))
+		if ((d2 < found_d2) && ![thing isCloaked] && (([thing isThargoid] && ![mother isThargoid]) || (([thing primaryTarget] == mother) && [thing hasHostileTarget])))
 		{
 			if (e1 > max_e)
 			{
-				found_target = thing->universalID;
+				[self setFoundTarget:thing];
 				max_e = e1;
 			}
 		}
 	}
 	
-	if (found_target != NO_TARGET)  [shipAI message:@"TARGET_FOUND"];
-	else  [shipAI message:@"NOTHING_FOUND"];
+	[self checkFoundTarget];
 }
 
 
@@ -2229,7 +2291,7 @@
 		}
 		
 		// Select nothing
-		found_target = NO_TARGET;
+		DESTROY(_foundTarget);
 		[[self getAI] message:@"NOTHING_FOUND"];
 	}
 	
@@ -2309,6 +2371,14 @@
 	{
 		// select a random station
 		station = (StationEntity *)my_entities[ranrot_rand() % station_count];
+		// if more than one candidate do not select main station
+		if (station == [UNIVERSE station] && station_count > 1)
+		{
+			while (station == [UNIVERSE station])
+			{
+				station = (StationEntity *)my_entities[ranrot_rand() % station_count];
+			}
+		}
 	}
 	
 	for (i = 0; i < station_count; i++)
@@ -2316,8 +2386,8 @@
 	//
 	if (station)
 	{
-		primaryTarget = [station universalID];
-		targetStation = primaryTarget;
+		[self addTarget:station];
+		[self setTargetStation:station];
 		[shipAI message:@"STATION_FOUND"];
 	}
 	else
@@ -2328,16 +2398,16 @@
 
 - (void) setTargetToLastStation
 {
-	Entity	*station = [UNIVERSE entityForUniversalID:targetStation];
+	Entity	*station = [self targetStation];
 	
-	if ([station isStation])
+	if (station != nil && [station isStation])
 	{
-		primaryTarget = targetStation;
+		[self addTarget:station];
 	}
 	else
 	{
 		[shipAI message:@"NO_STATION_FOUND"];
-		targetStation = NO_TARGET;
+		[self setTargetStation:nil];
 	}
 	
 }
@@ -2353,7 +2423,7 @@
 	NSString		*message = nil;
 	double		distanceToStation2 = 0.0;
 	
-	targStation = [UNIVERSE entityForUniversalID:targetStation];
+	targStation = [self targetStation];
 	if ([targStation isStation])
 	{
 		station = (StationEntity*)targStation;
@@ -2405,12 +2475,20 @@
 	if (dockingInstructions != nil)
 	{
 		destination = [dockingInstructions oo_vectorForKey:@"destination"];
-		desired_speed = fminf([dockingInstructions oo_floatForKey:@"speed"], maxFlightSpeed);
+		desired_speed = fmin([dockingInstructions oo_floatForKey:@"speed"], maxFlightSpeed);
 		desired_range = [dockingInstructions oo_floatForKey:@"range"];
-		if ([dockingInstructions objectForKey:@"station_id"])
+		if ([dockingInstructions objectForKey:@"station"])
 		{
-			primaryTarget = [dockingInstructions oo_intForKey:@"station_id"];
-			targetStation = primaryTarget;
+			StationEntity *targetStation = [[dockingInstructions objectForKey:@"station"] weakRefUnderlyingObject];
+			if (targetStation != nil)
+			{
+				[self addTarget:targetStation];
+				[self setTargetStation:targetStation];
+			}
+			else 
+			{
+				[self removeTarget:[self primaryTarget]];
+			}
 		}
 		docking_match_rotation = [dockingInstructions oo_boolForKey:@"match_rotation"];
 	}
@@ -2422,52 +2500,10 @@
 	[self setFuel:[self fuel] + [fuel_number intValue] * 10];
 }
 
+
 - (void) enterPlayerWormhole
 {
 	[self enterWormhole:[PLAYER wormhole] replacing:NO];
-}
-
-- (void) enterTargetWormhole
-{
-	WormholeEntity *whole = nil;
-	ShipEntity		*targEnt = [self primaryTarget];
-	double found_d2 = scannerRange * scannerRange;
-	
-	if (targEnt && (distance2(position, [targEnt position]) < found_d2))
-	{
-		if ([targEnt isWormhole])
-			whole = (WormholeEntity *)targEnt;
-		else if ([targEnt isPlayer])
-			whole = [PLAYER wormhole];
-	}
-
-	if (!whole)
-	{
-		// locate nearest wormhole
-		int				ent_count =		UNIVERSE->n_entities;
-		Entity**		uni_entities =	UNIVERSE->sortedEntities;	// grab the public sorted list
-		WormholeEntity*	wormholes[ent_count];
-		int i;
-		int wh_count = 0;
-		for (i = 0; i < ent_count; i++)
-			if (uni_entities[i]->isWormhole)
-				wormholes[wh_count++] = [(WormholeEntity *)uni_entities[i] retain];
-		//
-		//double found_d2 = scannerRange * scannerRange;
-		for (i = 0; i < wh_count ; i++)
-		{
-			WormholeEntity *wh = wormholes[i];
-			double d2 = distance2(position, wh->position);
-			if (d2 < found_d2)
-			{
-				whole = wh;
-				found_d2 = d2;
-			}
-			[wh release];
-		}
-	}
-	
-	[self enterWormhole:whole replacing:NO];
 }
 
 
@@ -2547,11 +2583,19 @@
 	[self setThrowSparks:YES];
 }
 
+
 - (void) explodeSelf
 {
 	[self getDestroyedBy:nil damageType:kOODamageTypeEnergy];
 }
 
+
+- (void) ai_debugMessage:(NSString *)message
+{
+	NSString *desc = [NSString stringWithFormat:@"%@ %d", [self name], [self universalID]];
+	if ([self isPlayer])  desc = @"player autopilot";
+	OOLog(@"ai.takeAction.debugMessage", @"DEBUG: AI MESSAGE from %@: %@", desc, message);
+}
 
 
 
@@ -2561,7 +2605,7 @@
 	NSArray			*all_beacons = [UNIVERSE listBeaconsWithCode: code];
 	if ([all_beacons count])
 	{
-		primaryTarget = [(ShipEntity*)[all_beacons objectAtIndex:0] universalID];
+		[self addTarget:(ShipEntity*)[all_beacons objectAtIndex:0]];
 		[shipAI message:@"TARGET_FOUND"];
 	}
 	else
@@ -2572,7 +2616,7 @@
 - (void) targetNextBeaconWithCode:(NSString*) code
 {
 	NSArray			*all_beacons = [UNIVERSE listBeaconsWithCode: code];
-	ShipEntity		*current_beacon = [UNIVERSE entityForUniversalID:primaryTarget];
+	ShipEntity		*current_beacon = [self primaryTarget];
 	
 	if ((!current_beacon)||(![current_beacon isBeacon]))
 	{
@@ -2595,7 +2639,7 @@
 	if (i < [all_beacons count])
 	{
 		// locate current target in list
-		primaryTarget = [(ShipEntity*)[all_beacons objectAtIndex:i] universalID];
+		[self addTarget:(ShipEntity*)[all_beacons objectAtIndex:i]];
 		[shipAI message:@"TARGET_FOUND"];
 	}
 	else
@@ -2609,7 +2653,7 @@
 - (void) setRacepointsFromTarget
 {
 	// two point - one at z - cr one at z + cr
-	ShipEntity *ship = [UNIVERSE entityForUniversalID:primaryTarget];
+	ShipEntity *ship = [self primaryTarget];
 	if (ship == nil)
 	{
 		[shipAI message:@"NOTHING_FOUND"];
@@ -2640,6 +2684,19 @@
 
 @implementation ShipEntity (OOAIPrivate)
 
+- (void) checkFoundTarget
+{
+	if ([self foundTarget] != nil) 
+	{
+		[shipAI message:@"TARGET_FOUND"];
+	}
+	else
+	{
+		[shipAI message:@"NOTHING_FOUND"];
+	}
+}
+
+
 - (BOOL) performHyperSpaceExitReplace:(BOOL)replace
 {
 	return [self performHyperSpaceExitReplace:replace toSystem:-1];
@@ -2651,6 +2708,11 @@
 	if(![self hasHyperspaceMotor])
 	{
 		[shipAI reactToMessage:@"WITCHSPACE UNAVAILABLE" context:@"performHyperSpaceExit"];
+		return NO;
+	}
+	if([self status] == STATUS_ENTERING_WITCHSPACE)
+	{
+// already in a wormhole
 		return NO;
 	}
 	
@@ -2676,7 +2738,7 @@
 	ShipEntity *blocker = [UNIVERSE entityForUniversalID:[self checkShipsInVicinityForWitchJumpExit]];
 	if (blocker)
 	{
-		found_target = [blocker universalID];
+		[self setFoundTarget:blocker];
 		[shipAI reactToMessage:@"WITCHSPACE BLOCKED" context:@"performHyperSpaceExit"];
 		return NO;
 	}
@@ -2705,7 +2767,7 @@
 	double dist = [(NSDictionary*)[sDests objectAtIndex:i] oo_doubleForKey:@"distance"];
 	if (dist > [self maxHyperspaceDistance] || dist > fuel/10) 
 	{
-		OOLogWARN(@"script.debug", @"DEBUG: %@ Jumping %d which is further than allowed.  I have %d fuel", self, dist, fuel);
+		OOLogWARN(@"script.debug", @"DEBUG: %@ Jumping %f which is further than allowed.  I have %d fuel", self, dist, fuel);
 	}
 	fuel -= 10 * dist;
 	
@@ -2727,7 +2789,7 @@
 	ShipEntity		*candidate;
 	float			d2, found_d2 = scannerRange * scannerRange;
 	
-	found_target = NO_TARGET;
+	DESTROY(_foundTarget);
 	[self checkScanner];
 	
 	if (predicate == NULL)  return;
@@ -2739,13 +2801,12 @@
 		if ((d2 < found_d2) && (candidate->scanClass != CLASS_CARGO) && ([candidate status] != STATUS_DOCKED) 
 					&& predicate(candidate, parameter) && ![candidate isCloaked])
 		{
-			found_target = candidate->universalID;
+			[self setFoundTarget:candidate];
 			found_d2 = d2;
 		}
 	}
 	
-	if (found_target != NO_TARGET)  [shipAI message:@"TARGET_FOUND"];
-	else  [shipAI message:@"NOTHING_FOUND"];
+	[self checkFoundTarget];
 }
 
 
@@ -2758,10 +2819,10 @@
 
 - (void) acceptDistressMessageFrom:(ShipEntity *)other
 {
-	found_target = [[other primaryTarget] universalID];
+	[self setFoundTarget:[other primaryTarget]];
 	if ([self isPolice])
 	{
-		[[UNIVERSE entityForUniversalID:found_target] markAsOffender:8 withReason:kOOLegalStatusReasonDistressCall];  // you have been warned!!
+		[(ShipEntity*)[self foundTarget] markAsOffender:8 withReason:kOOLegalStatusReasonDistressCall];  // you have been warned!!
 	}
 	
 	NSString *context = nil;
@@ -2772,6 +2833,9 @@
 	
 }
 
+
+
+
 @end
 
 
@@ -2781,11 +2845,11 @@
 {
 	if (self != [UNIVERSE station])  return;
 	
-	int old_target = primaryTarget;
-	primaryTarget = [[other primaryTarget] universalID];
+	OOWeakReference *old_target = _primaryTarget;
+	_primaryTarget = [[[other primaryTarget] weakRetain] autorelease];
 	[(ShipEntity *)[other primaryTarget] markAsOffender:8 withReason:kOOLegalStatusReasonDistressCall];	// mark their card
 	[self launchDefenseShip];
-	primaryTarget = old_target;
+	_primaryTarget = old_target;
 	
 }
 

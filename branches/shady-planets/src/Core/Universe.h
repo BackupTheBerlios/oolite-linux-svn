@@ -41,8 +41,9 @@ MA 02110-1301, USA.
 #endif
 
 @class	GameController, CollisionRegion, MyOpenGLView, GuiDisplayGen,
-		Entity, ShipEntity, StationEntity, OOPlanetEntity, OOSunEntity,
-	PlayerEntity, OORoleSet, WormholeEntity;
+	Entity, ShipEntity, StationEntity, OOPlanetEntity, OOSunEntity,
+	OOVisualEffectEntity, PlayerEntity, OORoleSet, WormholeEntity, 
+	DockEntity, OOJSScript;
 
 
 typedef BOOL (*EntityFilterPredicate)(Entity *entity, void *parameter);
@@ -132,9 +133,6 @@ enum
 
 #define PLANETINFO_UNIVERSAL_KEY			@"universal"
 
-// Derived constants (MIN_ENTITY_UID, MAX_ENTITY_UID) are defined in OOTypes.h
-#define	UNIVERSE_MAX_ENTITIES				2048
-
 #define OOLITE_EXCEPTION_LOOPING			@"OoliteLoopingException"
 #define OOLITE_EXCEPTION_DATA_NOT_FOUND		@"OoliteDataNotFoundException"
 #define OOLITE_EXCEPTION_FATAL				@"OoliteFatalException"
@@ -147,6 +145,8 @@ enum
 
 #define DEMO_LIGHT_POSITION 5000.0f, 25000.0f, -10000.0f
 
+#define MIN_DISTANCE_TO_BUOY			750.0f // don't add ships within this distance
+#define MIN_DISTANCE_TO_BUOY2			(MIN_DISTANCE_TO_BUOY * MIN_DISTANCE_TO_BUOY)
 
 #ifndef OO_LOCALIZATION_TOOLS
 #define OO_LOCALIZATION_TOOLS	1
@@ -157,16 +157,11 @@ enum
 #endif
 
 
-typedef OOUInteger	OOTechLevelID;		// 0..14, 99 is special. NSNotFound is used, so OOUInteger required.
-typedef uint8_t		OOGovernmentID;		// 0..7
-typedef uint8_t		OOEconomyID;		// 0..7
-
-
 @interface Universe: OOWeakRefObject
 {
 @public
 	// use a sorted list for drawing and other activities
-	Entity					*sortedEntities[UNIVERSE_MAX_ENTITIES];
+	Entity					*sortedEntities[UNIVERSE_MAX_ENTITIES + 1];	// One extra for padding; see -doRemoveEntity:.
 	unsigned				n_entities;
 	
 	int						cursor_row;
@@ -211,7 +206,6 @@ typedef uint8_t		OOEconomyID;		// 0..7
 	
 	BOOL					displayGUI;
 	BOOL					wasDisplayGUI;
-	BOOL					displayCursor;
 	
 	BOOL					autoSaveNow;
 	BOOL					autoSave;
@@ -294,7 +288,7 @@ typedef uint8_t		OOEconomyID;		// 0..7
 	
 #if OOLITE_SPEECH_SYNTH
 #if OOLITE_MAC_OS_X
-	NSSpeechSynthesizer		*speechSynthesizer;		// use this from OS X 10.3 onwards
+	NSSpeechSynthesizer		*speechSynthesizer;
 #elif OOLITE_ESPEAK
 	const espeak_VOICE		**espeak_voices;
 	unsigned int			espeak_voice_count;
@@ -310,10 +304,13 @@ typedef uint8_t		OOEconomyID;		// 0..7
 #if FRUSTUM_CULL
 	GLfloat         frustum[6][4];
 #endif
+
+	NSMutableDictionary  *conditionScripts;
 	
 	BOOL					_pauseMessage;
 	BOOL					_autoCommLog;
 	BOOL					_permanentCommLog;
+	BOOL          _witchspaceBreakPattern;
 }
 
 - (id)initWithGameView:(MyOpenGLView *)gameView;
@@ -337,7 +334,6 @@ typedef uint8_t		OOEconomyID;		// 0..7
 #endif
 
 - (void) pauseGame;
-- (BOOL) isGamePaused;
 
 - (void) carryPlayerOn:(StationEntity*)carrier inWormhole:(WormholeEntity*)wormhole;
 - (void) setUpUniverseFromStation;
@@ -366,15 +362,22 @@ typedef uint8_t		OOEconomyID;		// 0..7
 - (void) witchspaceShipWithPrimaryRole:(NSString *)role;
 - (ShipEntity *) spawnShipWithRole:(NSString *) desc near:(Entity *) entity;
 
+- (OOVisualEffectEntity *) addVisualEffectAt:(Vector)pos withKey:(NSString *)key;
 - (ShipEntity *) addShipAt:(Vector)pos withRole:(NSString *)role withinRadius:(GLfloat)radius;
 - (NSArray *) addShipsAt:(Vector)pos withRole:(NSString *)role quantity:(unsigned)count withinRadius:(GLfloat)radius asGroup:(BOOL)isGroup;
 - (NSArray *) addShipsToRoute:(NSString *)route withRole:(NSString *)role quantity:(unsigned)count routeFraction:(double)routeFraction asGroup:(BOOL)isGroup;
 
 - (BOOL) roleIsPirateVictim:(NSString *)role;
 
+- (void) forceWitchspaceEntries;
 - (void) addWitchspaceJumpEffectForShip:(ShipEntity *)ship;
+- (GLfloat) safeWitchspaceExitDistance;
 
 - (void) setUpBreakPattern:(Vector)pos orientation:(Quaternion)q forDocking:(BOOL)forDocking;
+- (BOOL) witchspaceBreakPattern;
+- (void) setWitchspaceBreakPattern:(BOOL)newValue;
+
+
 - (void) handleGameOver;
 
 - (void) setupIntroFirstGo:(BOOL)justCobra;
@@ -407,6 +410,8 @@ typedef uint8_t		OOEconomyID;		// 0..7
 - (NSString *) randomShipKeyForRoleRespectingConditions:(NSString *)role;
 - (ShipEntity *) newShipWithRole:(NSString *)role OO_RETURNS_RETAINED;		// Selects ship using role weights, applies auto_ai, respects conditions
 - (ShipEntity *) newShipWithName:(NSString *)shipKey OO_RETURNS_RETAINED;	// Does not apply auto_ai or respect conditions
+- (OOVisualEffectEntity *) newVisualEffectWithName:(NSString *)effectKey OO_RETURNS_RETAINED;
+- (DockEntity *) newDockWithName:(NSString *)shipKey OO_RETURNS_RETAINED;	// Does not apply auto_ai or respect conditions
 - (ShipEntity *) newShipWithName:(NSString *)shipKey usePlayerProxy:(BOOL)usePlayerProxy OO_RETURNS_RETAINED;	// If usePlayerProxy, non-carriers are instantiated as ProxyPlayerEntity.
 
 - (Class) shipClassForShipDictionary:(NSDictionary *)dict;
@@ -494,6 +499,10 @@ typedef uint8_t		OOEconomyID;		// 0..7
 									  parameter:(void *)parameter
 										inRange:(double)range
 									   ofEntity:(Entity *)entity;
+- (NSMutableArray *) findVisualEffectsMatchingPredicate:(EntityFilterPredicate)predicate
+									  parameter:(void *)parameter
+										inRange:(double)range
+									   ofEntity:(Entity *)entity;
 - (id) nearestEntityMatchingPredicate:(EntityFilterPredicate)predicate
 							parameter:(void *)parameter
 					 relativeToEntity:(Entity *)entity;
@@ -509,8 +518,9 @@ typedef uint8_t		OOEconomyID;		// 0..7
 - (NSString*) collisionDescription;
 - (void) dumpCollisions;
 
-- (void) setViewDirection:(OOViewID) vd;
 - (OOViewID) viewDirection;
+- (void) setViewDirection:(OOViewID)vd;
+- (void) enterGUIViewModeWithMouseInteraction:(BOOL)mouseInteraction;	// Use instead of setViewDirection:VIEW_GUI_DISPLAY
 
 - (NSString *) soundNameForCustomSoundKey:(NSString *)key;
 - (NSDictionary *) screenTextureDescriptorForKey:(NSString *)key;
@@ -645,9 +655,6 @@ typedef uint8_t		OOEconomyID;		// 0..7
 
 - (void) resetCommsLogColor;
 
-- (void) setDisplayCursor:(BOOL) value;
-- (BOOL) displayCursor;
-
 - (void) setDisplayText:(BOOL) value;
 - (BOOL) displayGUI;
 
@@ -708,6 +715,10 @@ typedef uint8_t		OOEconomyID;		// 0..7
 
 - (BOOL) blockJSPlayerShipProps;
 - (void) setBlockJSPlayerShipProps:(BOOL)value;
+
+- (void) loadConditionScripts;
+- (void) addConditionScripts:(NSEnumerator *)scripts;
+- (OOJSScript*) getConditionScript:(NSString *)scriptname;
 
 @end
 

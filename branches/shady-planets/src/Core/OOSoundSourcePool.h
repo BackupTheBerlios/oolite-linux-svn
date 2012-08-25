@@ -39,6 +39,7 @@ SOFTWARE.
 
 @interface OOSoundSourcePool: NSObject
 {
+@private
 	struct OOSoundSourcePoolElement	*_sources;
 	uint8_t							_count;
 	uint8_t							_latest;
@@ -48,7 +49,7 @@ SOFTWARE.
 	NSString						*_lastKey;
 }
 
-+ (id) poolWithCount:(uint8_t)count minRepeatTime:(OOTimeDelta)minRepeat;
++ (instancetype) poolWithCount:(uint8_t)count minRepeatTime:(OOTimeDelta)minRepeat;
 - (id) initWithCount:(uint8_t)count minRepeatTime:(OOTimeDelta)minRepeat;
 
 - (void) playSoundWithKey:(NSString *)key

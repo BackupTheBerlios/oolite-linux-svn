@@ -64,6 +64,7 @@ SOFTWARE.
 
 @interface OODebugMonitor: OOWeakRefObject <OODebugMonitorInterface>
 {
+@private
 	id<OODebuggerInterface>				_debugger;
 	
 	// JavaScript console support.
@@ -82,7 +83,7 @@ SOFTWARE.
 	BOOL								_usingPlugInController;
 }
 
-+ (id)sharedDebugMonitor;
++ (OODebugMonitor *) sharedDebugMonitor;
 - (BOOL)setDebugger:(id<OODebuggerInterface>)debugger;
 
 	// *** JavaScript console support.

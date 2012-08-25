@@ -204,13 +204,28 @@ static void DrawWormholeCorona(GLfloat inner_radius, GLfloat outer_radius, int s
 
 - (BOOL) suckInShip:(ShipEntity *) ship
 {
-	if (!ship)
+	if (!ship || [ship status] == STATUS_ENTERING_WITCHSPACE)
+	{
 		return NO;
+	}
+	if (!equal_seeds(origin,[UNIVERSE systemSeed]))
+	{
+		// if we're no longer in the origin system, can't suck in
+		return NO;
+	}
+	if ([PLAYER galaxy_coordinates].x != originCoords.x || [PLAYER galaxy_coordinates].y != originCoords.y)
+	{
+		// if we're no longer at the origin coordinates, can't suck in (handles interstellar space case)
+		return NO;
+	}
 
 	double now = [PLAYER clockTimeAdjusted];
 
-	if (now > arrival_time)
-		return NO;	// far end of the wormhole!
+/* CIM: removed test. Not valid for wormholes which last longer than their travel time. Most likely for short distances e.g. zero-distance doubles. equal_seeds test above should cover it, with expiry_time test for safety.  */
+/*	if (now > arrival_time)
+		return NO;	// far end of the wormhole! */
+	if( now > expiry_time )
+		return NO;
 	
 	// MKW 2010.11.18 - calculate time it takes for ship to reach wormhole
 	// This is for AI ships which get told to enter the wormhole even though they
@@ -279,16 +294,17 @@ static void DrawWormholeCorona(GLfloat inner_radius, GLfloat outer_radius, int s
 	int i;
 	for (i = 0; i < n_ships; i++)
 	{
-		ShipEntity* ship = (ShipEntity*)[(NSDictionary*)[shipsInTransit objectAtIndex:i] objectForKey:@"ship"];
-		NSString *shipBeacon = [(NSDictionary *)[shipsInTransit objectAtIndex:i] objectForKey:@"shipBeacon"];
-		double	ship_arrival_time = arrival_time + [(NSNumber*)[(NSDictionary*)[shipsInTransit objectAtIndex:i] objectForKey:@"time"] doubleValue];
+		NSDictionary *shipInfo = [shipsInTransit objectAtIndex:i];
+		ShipEntity *ship = [shipInfo objectForKey:@"ship"];
+		NSString *shipBeacon = [shipInfo objectForKey:@"shipBeacon"];
+		double	ship_arrival_time = arrival_time + [shipInfo oo_doubleForKey:@"time"];
 		double	time_passed = now - ship_arrival_time;
 		
 		if ([ship status] == STATUS_DEAD) continue; // skip dead ships.
 		
 		if (ship_arrival_time > now)
 		{
-			[shipsStillInTransit addObject:[shipsInTransit objectAtIndex:i]];
+			[shipsStillInTransit addObject:shipInfo];
 		}
 		else
 		{
@@ -296,11 +312,12 @@ static void DrawWormholeCorona(GLfloat inner_radius, GLfloat outer_radius, int s
 			if (!hasExitPosition)
 			{
 				position = [UNIVERSE getWitchspaceExitPosition];	// no need to reset PRNG.
+				GLfloat min_d1 = [UNIVERSE safeWitchspaceExitDistance];
 				Quaternion	q1;
 				quaternion_set_random(&q1);
 				double		d1 = SCANNER_MAX_RANGE*((ranrot_rand() % 256)/256.0 - 0.5);
-				if (abs(d1) < 750.0)	// no closer than 750m
-					d1 += ((d1 > 0.0)? 750.0: -750.0);
+				if (abs(d1) < min_d1)	// no closer than 750m to edge of buoy
+					d1 += ((d1 > 0.0)? min_d1: -min_d1);
 				Vector		v1 = vector_forward_from_quaternion(q1);
 				position.x += v1.x * d1; // randomise exit position
 				position.y += v1.y * d1;
@@ -552,10 +569,18 @@ static void DrawWormholeCorona(GLfloat inner_radius, GLfloat outer_radius, int s
 
 - (BOOL) canCollide
 {
-	if ([PLAYER clockTime] > arrival_time)
+	/* Correct test for far end of wormhole */
+	if (!equal_seeds(origin,[UNIVERSE systemSeed]))
 	{
-		return NO;	// far end of the wormhole!
+		// if we're no longer in the origin system, can't suck in
+		return NO;
 	}
+	if ([PLAYER galaxy_coordinates].x != originCoords.x || [PLAYER galaxy_coordinates].y != originCoords.y)
+	{
+		// if we're no longer at the origin coordinates, can't suck in (handles interstellar space case)
+		return NO;
+	}
+
 	return (witch_mass > 0.0);
 }
 
@@ -572,7 +597,7 @@ static void DrawWormholeCorona(GLfloat inner_radius, GLfloat outer_radius, int s
 	
 	PlayerEntity	*player = PLAYER;
 	assert(player != nil);
-	rotMatrix = OOMatrixForBillboard(position, [player position]);
+	rotMatrix = OOMatrixForBillboard(position, [player viewpointPosition]);
 	double now = [player clockTimeAdjusted];
 	
 	if (witch_mass > 0.0)
@@ -600,7 +625,7 @@ static void DrawWormholeCorona(GLfloat inner_radius, GLfloat outer_radius, int s
 	if ([UNIVERSE breakPatternHide])
 		return;		// DON'T DRAW DURING BREAK PATTERN
 	
-	if (zero_distance > no_draw_distance)
+	if (cam_zero_distance > no_draw_distance)
 		return;	// TOO FAR AWAY TO SEE
 		
 	if (witch_mass <= 0.0)
@@ -615,9 +640,9 @@ static void DrawWormholeCorona(GLfloat inner_radius, GLfloat outer_radius, int s
 	if (translucent)
 	{
 		// for now, a simple copy of the energy bomb draw routine
-		float srzd = sqrtf(zero_distance);
+		float srzd = sqrt(cam_zero_distance);
 		
-		GLfloat	color_fv[4] = { 0.0, 0.0, 1.0, 0.25};
+		GLfloat	color_fv[4] = { 0.0, 0.0, 1.0, 0.25 };
 		
 		OOGL(glDisable(GL_CULL_FACE));			// face culling
 		OOGL(glDisable(GL_TEXTURE_2D));
@@ -667,13 +692,13 @@ static void DrawWormholeCorona(GLfloat inner_radius, GLfloat outer_radius, int s
 			
 			q = activity.location + rv0 * activity.length;
 			
-			s0 = r0 * sinf(theta);
-			c0 = r0 * cosf(theta);
+			s0 = r0 * sin(theta);
+			c0 = r0 * cos(theta);
 			glColor4f(col4v1[0] * q, col4v1[1] * q, col4v1[2] * q, col4v1[3] * rv0);
 			glVertex3f(s0, c0, 0.0);
 
-			s1 = r1 * sinf(theta - halfStep) * 0.5 * (1.0 + rv1);
-			c1 = r1 * cosf(theta - halfStep) * 0.5 * (1.0 + rv1);
+			s1 = r1 * sin(theta - halfStep) * 0.5 * (1.0 + rv1);
+			c1 = r1 * cos(theta - halfStep) * 0.5 * (1.0 + rv1);
 			glColor4f(col4v1[0], col4v1[1], col4v1[2], 0.0);
 			glVertex3f(s1, c1, 0.0);
 			
@@ -684,13 +709,13 @@ static void DrawWormholeCorona(GLfloat inner_radius, GLfloat outer_radius, int s
 			
 		q = activity.location + rv0 * activity.length;
 		
-		s0 = 0.0f;	// r0 * sinf(0);
-		c0 = r0;	// r0 * cosf(0);
+		s0 = 0.0f;	// r0 * sin(0);
+		c0 = r0;	// r0 * cos(0);
 		glColor4f(col4v1[0] * q, col4v1[1] * q, col4v1[2] * q, col4v1[3] * rv0);
 		glVertex3f(s0, c0, 0.0);
 
-		s1 = r1 * sinf(halfStep) * 0.5 * (1.0 + rv1);
-		c1 = r1 * cosf(halfStep) * 0.5 * (1.0 + rv1);
+		s1 = r1 * sin(halfStep) * 0.5 * (1.0 + rv1);
+		c1 = r1 * cos(halfStep) * 0.5 * (1.0 + rv1);
 		glColor4f(col4v1[0], col4v1[1], col4v1[2], 0.0);
 		glVertex3f(s1, c1, 0.0);
 	OOGLEND();
@@ -755,7 +780,7 @@ static void DrawWormholeCorona(GLfloat inner_radius, GLfloat outer_radius, int s
 	OOLog(@"dumpState.wormholeEntity", @"Scanned State          : %@", [self scanInfoString]);
 
 	OOLog(@"dumpState.wormholeEntity", @"Mass                   : %.2lf", witch_mass);
-	OOLog(@"dumpState.wormholeEntity", @"Ships                  : %d", [shipsInTransit count]);
+	OOLog(@"dumpState.wormholeEntity", @"Ships                  : %ld", [shipsInTransit count]);
 	unsigned i;
 	for (i = 0; i < [shipsInTransit count]; ++i)
 	{

@@ -34,14 +34,15 @@ SOFTWARE.
 
 @interface OORoleSet: NSObject <NSCopying>
 {
+@private
 	NSString					*_roleString;
 	NSDictionary				*_rolesAndProbabilities;
 	NSSet						*_roles;
 	float						_totalProb;
 }
 
-+ (id)roleSetWithString:(NSString *)roleString;
-+ (id)roleSetWithRole:(NSString *)role probability:(float)probability;
++ (instancetype) roleSetWithString:(NSString *)roleString;
++ (instancetype) roleSetWithRole:(NSString *)role probability:(float)probability;
 
 - (id)initWithRoleString:(NSString *)roleString;
 - (id)initWithRole:(NSString *)role probability:(float)probability;

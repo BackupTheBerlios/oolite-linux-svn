@@ -24,6 +24,7 @@ MA 02110-1301, USA.
 
 #import "GuiDisplayGen.h"
 #import "Universe.h"
+#import "GameController.h"
 #import "PlayerEntity.h"
 #import "PlayerEntityControls.h"
 #import "OOTextureSprite.h"
@@ -49,6 +50,9 @@ OOINLINE BOOL RowInRange(OOGUIRow row, NSRange range)
 - (void) drawCrossHairsWithSize:(GLfloat) size x:(GLfloat)x y:(GLfloat)y z:(GLfloat)z;
 - (void) drawStarChart:(GLfloat)x :(GLfloat)y :(GLfloat)z :(GLfloat) alpha;
 - (void) drawGalaxyChart:(GLfloat)x :(GLfloat)y :(GLfloat)z :(GLfloat) alpha;
+- (void) drawSystemMarkers:(NSArray *)marker atX:(GLfloat)x andY:(GLfloat)y andZ:(GLfloat)z withAlpha:(GLfloat)alpha andScale:(GLfloat)scale;
+- (void) drawSystemMarker:(NSDictionary *)marker atX:(GLfloat)x andY:(GLfloat)y andZ:(GLfloat)z withAlpha:(GLfloat)alpha andScale:(GLfloat)scale;
+
 - (void) drawEqptList: (NSArray *)eqptList z:(GLfloat)z;
 - (void) drawAdvancedNavArrayAtX:(float)x y:(float)y z:(float)z alpha:(float)alpha usingRoute:(NSDictionary *) route optimizedBy:(OORouteType) optimizeBy;
 
@@ -61,50 +65,50 @@ static BOOL _refreshStarChart = NO;
 
 - (id) init
 {
-	self = [super init];
+	if ((self = [super init]))
+	{
+		size_in_pixels  = NSMakeSize(MAIN_GUI_PIXEL_WIDTH, MAIN_GUI_PIXEL_HEIGHT);
+		n_columns		= GUI_DEFAULT_COLUMNS;
+		n_rows			= GUI_DEFAULT_ROWS;
+		pixel_row_center = size_in_pixels.width / 2;
+		pixel_row_height = MAIN_GUI_ROW_HEIGHT;
+		pixel_row_start	= MAIN_GUI_PIXEL_ROW_START;		// first position down the page...
+		max_alpha = 1.0;
 		
-	size_in_pixels  = NSMakeSize(MAIN_GUI_PIXEL_WIDTH, MAIN_GUI_PIXEL_HEIGHT);
-	n_columns		= GUI_DEFAULT_COLUMNS;
-	n_rows			= GUI_DEFAULT_ROWS;
-	pixel_row_center = size_in_pixels.width / 2;
-	pixel_row_height = MAIN_GUI_ROW_HEIGHT;
-	pixel_row_start	= MAIN_GUI_PIXEL_ROW_START;		// first position down the page...
-	max_alpha = 1.0;
-
-	pixel_text_size = NSMakeSize(0.9f * pixel_row_height, pixel_row_height);	// main gui has 18x20 characters
-	
-	pixel_title_size = NSMakeSize(pixel_row_height * 1.75f, pixel_row_height * 1.5f);
-	
-	int stops[6] = {0, 192, 256, 320, 384, 448};
-	unsigned i;
-	
-	rowRange = NSMakeRange(0,n_rows);
-
-	rowText =   [[NSMutableArray alloc] initWithCapacity:n_rows];   // alloc retains
-	rowKey =	[[NSMutableArray alloc] initWithCapacity:n_rows];   // alloc retains
-	rowColor =	[[NSMutableArray alloc] initWithCapacity:n_rows];   // alloc retains
-	
-	for (i = 0; i < n_rows; i++)
-	{
-		[rowText addObject:@"."];
-		[rowKey addObject:[NSString stringWithFormat:@"%d",i]];
-		[rowColor addObject:[OOColor yellowColor]];
-		rowPosition[i].x = 0.0f;
-		rowPosition[i].y = size_in_pixels.height - (pixel_row_start + i * pixel_row_height);
-		rowAlignment[i] = GUI_ALIGN_LEFT;
+		pixel_text_size = NSMakeSize(0.9f * pixel_row_height, pixel_row_height);	// main gui has 18x20 characters
+		
+		pixel_title_size = NSMakeSize(pixel_row_height * 1.75f, pixel_row_height * 1.5f);
+		
+		int stops[6] = {0, 192, 256, 320, 384, 448};
+		unsigned i;
+		
+		rowRange = NSMakeRange(0,n_rows);
+		
+		rowText =   [[NSMutableArray alloc] initWithCapacity:n_rows];   // alloc retains
+		rowKey =	[[NSMutableArray alloc] initWithCapacity:n_rows];   // alloc retains
+		rowColor =	[[NSMutableArray alloc] initWithCapacity:n_rows];   // alloc retains
+		
+		for (i = 0; i < n_rows; i++)
+		{
+			[rowText addObject:@"."];
+			[rowKey addObject:[NSString stringWithFormat:@"%d",i]];
+			[rowColor addObject:[OOColor yellowColor]];
+			rowPosition[i].x = 0.0f;
+			rowPosition[i].y = size_in_pixels.height - (pixel_row_start + i * pixel_row_height);
+			rowAlignment[i] = GUI_ALIGN_LEFT;
+		}
+		
+		for (i = 0; i < n_columns; i++)
+		{
+			tabStops[i] = stops[i];
+		}
+		
+		title = @"";
+		
+		textColor = [[OOColor yellowColor] retain];
+		
+		drawPosition = make_vector(0.0f, 0.0f, 640.0f);
 	}
-	
-	for (i = 0; i < n_columns; i++)
-	{
-		tabStops[i] = stops[i];
-	}
-	
-	title = @"";
-	
-	textColor = [[OOColor yellowColor] retain];
-	
-	drawPosition = make_vector(0.0f, 0.0f, 640.0f);
-
 	return self;
 }
 
@@ -912,9 +916,18 @@ static OOTextureSprite *NewTextureSpriteWithDescriptor(NSDictionary *descriptor)
 }
 
 
+- (void) setBackgroundTextureSpecial:(OOGUIBackgroundSpecial)spec
+{
+	[backgroundSprite autorelease];
+	backgroundSpecial = spec;
+	[self refreshStarChart];
+}
+
+
 - (BOOL) setBackgroundTextureDescriptor:(NSDictionary *)descriptor
 {
 	[backgroundSprite autorelease];
+	backgroundSpecial = GUI_BACKGROUND_SPECIAL_NONE;
 	backgroundSprite = NewTextureSpriteWithDescriptor(descriptor);
 	return backgroundSprite != nil;
 }
@@ -970,7 +983,15 @@ static OOTextureSprite *NewTextureSpriteWithDescriptor(NSDictionary *descriptor)
 	if (result == nil)
 	{
 		NSString *name = OOStringFromJSValue(context, value);
-		if (name != nil)
+		if ([name isEqualToString:@"SHORT_RANGE_CHART"])
+		{
+			return [NSDictionary dictionaryWithObject:[NSNumber numberWithInt:GUI_BACKGROUND_SPECIAL_SHORT] forKey:@"special"];
+		}
+		else if ([name isEqualToString:@"LONG_RANGE_CHART"])
+		{
+			return [NSDictionary dictionaryWithObject:[NSNumber numberWithInt:GUI_BACKGROUND_SPECIAL_LONG] forKey:@"special"];
+		}
+		else if (name != nil)
 		{
 			result = [NSDictionary dictionaryWithObject:name forKey:@"name"];
 			if ([name length] == 0)  return result;	// Explicit empty string may be used to indicate no texture.
@@ -999,6 +1020,12 @@ static OOTextureSprite *NewTextureSpriteWithDescriptor(NSDictionary *descriptor)
 }
 
 
+- (int) statusPage
+{
+	return statusPage;
+}
+
+
 - (void) drawEqptList:(NSArray *)eqptList z:(GLfloat)z 
 {
 	if ([eqptList count] == 0) return;
@@ -1020,7 +1047,8 @@ static OOTextureSprite *NewTextureSpriteWithDescriptor(NSDictionary *descriptor)
 	i = items_per_column * 2 + 2;
 	if (items_count > i) // don't fit in one page?
 	{
-		[UNIVERSE setDisplayCursor: YES];
+		[[UNIVERSE gameController] setMouseInteractionModeForUIWithMouseInteraction:YES];
+		 
 		i = items_per_column * 4; // total items in the first and last pages
 		items_per_column--; // for all the middle pages.
 		if (items_count <= i) // two pages
@@ -1104,10 +1132,14 @@ static OOTextureSprite *NewTextureSpriteWithDescriptor(NSDictionary *descriptor)
 	GLfloat y = drawPosition.y;
 	GLfloat z = [[UNIVERSE gameView] display_z];
 
-	if (backgroundSprite!=nil)
+	if (backgroundSpecial == GUI_BACKGROUND_SPECIAL_NONE)
 	{
-		[backgroundSprite blitBackgroundCentredToX:x Y:y Z:z alpha:1.0f];
+		if (backgroundSprite!=nil)
+		{
+			[backgroundSprite blitBackgroundCentredToX:x Y:y Z:z alpha:1.0f];
+		}
 	}
+
 }
 
 
@@ -1131,9 +1163,11 @@ static OOTextureSprite *NewTextureSpriteWithDescriptor(NSDictionary *descriptor)
 		
 		if (self == [UNIVERSE gui])
 		{
-			if ([player guiScreen] == GUI_SCREEN_SHORT_RANGE_CHART)
+			if ([player guiScreen] == GUI_SCREEN_SHORT_RANGE_CHART || backgroundSpecial == GUI_BACKGROUND_SPECIAL_SHORT)
+			{
 				[self drawStarChart:x - 0.5f * size_in_pixels.width :y - 0.5f * size_in_pixels.height :z :alpha];
-			if ([player guiScreen] == GUI_SCREEN_LONG_RANGE_CHART)
+			}
+			if ([player guiScreen] == GUI_SCREEN_LONG_RANGE_CHART || backgroundSpecial == GUI_BACKGROUND_SPECIAL_LONG)
 			{
 				[self drawGalaxyChart:x - 0.5f * size_in_pixels.width :y - 0.5f * size_in_pixels.height :z :alpha];
 			}
@@ -1404,7 +1438,7 @@ static OOTextureSprite *NewTextureSpriteWithDescriptor(NSDictionary *descriptor)
 		cursor_coordinates = galaxy_coordinates;	// home
 	
 	// get a list of systems marked as contract destinations
-	NSArray* markedDestinations = [player markedDestinations];
+	NSDictionary* markedDestinations = [player markedDestinations];
 	
 	// get present location
 	cu = NSMakePoint((float)(hscale*galaxy_coordinates.x+hoffset),(float)(vscale*galaxy_coordinates.y+voffset));
@@ -1437,16 +1471,19 @@ static OOTextureSprite *NewTextureSpriteWithDescriptor(NSDictionary *descriptor)
 		
 		if ((dx < 20)&&(dy < 38))
 		{
-			if ([markedDestinations oo_boolAtIndex:i])	// is marked
+			NSArray *markers = [markedDestinations objectForKey:[NSNumber numberWithInt:i]];
+			if (markers != nil)	// is marked
 			{
-				GLfloat mark_size = 0.5f * blob_size + 2.5f;
-				OOGL(glColor4f(1.0f, 0.0f, 0.0f, alpha));	// red
+				GLfloat base_size = 0.5f * blob_size + 2.5f;
+/*				OOGL(glColor4f(1.0f, 0.0f, 0.0f, alpha));	// red
 				OOGLBEGIN(GL_LINES);
 					glVertex3f(x + star.x - mark_size,	y + star.y - mark_size,	z);
 					glVertex3f(x + star.x + mark_size,	y + star.y + mark_size,	z);
 					glVertex3f(x + star.x - mark_size,	y + star.y + mark_size,	z);
 					glVertex3f(x + star.x + mark_size,	y + star.y - mark_size,	z);
-				OOGLEND();
+					OOGLEND(); */
+				[self drawSystemMarkers:markers atX:x+star.x andY:y+star.y andZ:z withAlpha:alpha andScale:base_size];
+
 				OOGL(glColor4f(1.0f, 1.0f, 0.75f, alpha));	// pale yellow
 			}
 			GLDrawFilledOval(x + star.x, y + star.y, z, NSMakeSize(blob_size,blob_size), 15);
@@ -1571,6 +1608,77 @@ static OOTextureSprite *NewTextureSpriteWithDescriptor(NSDictionary *descriptor)
 }
 
 
+- (void) drawSystemMarkers:(NSArray *)markers atX:(GLfloat)x andY:(GLfloat)y andZ:(GLfloat)z withAlpha:(GLfloat)alpha andScale:(GLfloat)scale
+{
+	NSEnumerator *mEnum; 
+	NSDictionary *marker;
+	for (mEnum = [markers objectEnumerator]; (marker = [mEnum nextObject]); )
+	{
+		[self drawSystemMarker:marker atX:x andY:y andZ:z withAlpha:alpha andScale:scale];
+	}
+}
+
+- (void) drawSystemMarker:(NSDictionary *)marker atX:(GLfloat)x andY:(GLfloat)y andZ:(GLfloat)z withAlpha:(GLfloat)alpha andScale:(GLfloat)scale
+{
+	NSString *colorDesc = [marker oo_stringForKey:@"markerColor" defaultValue:@"redColor"];
+	OORGBAComponents color = [[OOColor colorWithDescription:colorDesc] rgbaComponents];
+	
+	OOGL(glColor4f(color.r, color.g, color.b, alpha));	// red
+	GLfloat mark_size = [marker oo_floatForKey:@"markerScale" defaultValue:1.0];
+	if (mark_size > 2.0)
+	{
+		mark_size = 2.0;
+	}
+	else if (mark_size < 0.5)
+	{
+		mark_size = 0.5;
+	}
+	mark_size *= scale;
+
+	NSString *shape = [marker oo_stringForKey:@"markerShape" defaultValue:@"MARKER_X"];
+
+	OOGLBEGIN(GL_LINES);
+	if ([shape isEqualToString:@"MARKER_X"])
+	{
+		glVertex3f(x - mark_size,	y - mark_size,	z);
+		glVertex3f(x + mark_size,	y + mark_size,	z);
+		glVertex3f(x - mark_size,	y + mark_size,	z);
+		glVertex3f(x + mark_size,	y - mark_size,	z);
+	}
+	else if ([shape isEqualToString:@"MARKER_PLUS"])
+	{
+		glVertex3f(x,	y - mark_size,	z);
+		glVertex3f(x,	y + mark_size,	z);
+		glVertex3f(x - mark_size,	y,	z);
+		glVertex3f(x + mark_size,	y,	z);
+	}
+	else if ([shape isEqualToString:@"MARKER_SQUARE"])
+	{
+		glVertex3f(x - mark_size,	y - mark_size,	z);
+		glVertex3f(x - mark_size,	y + mark_size,	z);
+		glVertex3f(x - mark_size,	y + mark_size,	z);
+		glVertex3f(x + mark_size,	y + mark_size,	z);
+		glVertex3f(x + mark_size,	y + mark_size,	z);
+		glVertex3f(x + mark_size,	y - mark_size,	z);
+		glVertex3f(x + mark_size,	y - mark_size,	z);
+		glVertex3f(x - mark_size,	y - mark_size,	z);
+	}
+	else if ([shape isEqualToString:@"MARKER_DIAMOND"])
+	{
+		glVertex3f(x,	y - mark_size,	z);
+		glVertex3f(x - mark_size,	y,	z);
+		glVertex3f(x - mark_size,	y,	z);
+		glVertex3f(x,	y + mark_size,	z);
+		glVertex3f(x,	y + mark_size,	z);
+		glVertex3f(x + mark_size,	y,	z);
+		glVertex3f(x + mark_size,	y,	z);
+		glVertex3f(x,	y - mark_size,	z);
+	}
+	OOGLEND();
+
+}
+
+
 - (Random_Seed) targetNextFoundSystem:(int)direction // +1 , 0 , -1
 {
 	Random_Seed sys = [PLAYER target_system_seed];
@@ -1628,7 +1736,7 @@ static OOTextureSprite *NewTextureSpriteWithDescriptor(NSDictionary *descriptor)
 	double fuel = 35.0 * [player dialFuel];
 	
 	// get a list of systems marked as contract destinations
-	NSArray		*markedDestinations = [player markedDestinations];
+	NSDictionary		*markedDestinations = [player markedDestinations];
 	
 	BOOL		*systemsFound = [UNIVERSE systemsFound];
 	
@@ -1643,7 +1751,7 @@ static OOTextureSprite *NewTextureSpriteWithDescriptor(NSDictionary *descriptor)
 	BOOL		routeExists = YES;
 	
 	int			i;
-	double		distance, time;
+	double		distance = 0.0, time = 0.0;
 	
 	if (showAdvancedNavArray) advancedNavArrayMode = [[UNIVERSE gameView] isCtrlDown] ? OPTIMIZED_BY_TIME : OPTIMIZED_BY_JUMPS;
 	
@@ -1673,22 +1781,25 @@ static OOTextureSprite *NewTextureSpriteWithDescriptor(NSDictionary *descriptor)
 		time = distance * distance;
 	}
 	
-	if (routeExists)
+	if (!(backgroundSpecial == GUI_BACKGROUND_SPECIAL_LONG))
 	{
-		// distance-f & est-travel-time-f are identical between short & long range charts in standard Oolite, however can be alterered separately via OXPs
-		[self setText:[NSString stringWithFormat:ExpandDescriptionForCurrentSystem(@"[long-range-chart-distance-f]"), distance] forRow:18];
-		NSString *travelTimeLine = @"";
-		if (advancedNavArrayMode != OPTIMIZED_BY_NONE && distance > 0)
+		if (routeExists)
 		{
-			travelTimeLine = [NSString stringWithFormat:ExpandDescriptionForCurrentSystem(@"[long-range-chart-est-travel-time-f]"), time];
+			// distance-f & est-travel-time-f are identical between short & long range charts in standard Oolite, however can be alterered separately via OXPs
+			[self setText:[NSString stringWithFormat:ExpandDescriptionForCurrentSystem(@"[long-range-chart-distance-f]"), distance] forRow:18];
+			NSString *travelTimeLine = @"";
+			if (advancedNavArrayMode != OPTIMIZED_BY_NONE && distance > 0)
+			{
+				travelTimeLine = [NSString stringWithFormat:ExpandDescriptionForCurrentSystem(@"[long-range-chart-est-travel-time-f]"), time];
+			}
+			[self setText:travelTimeLine forRow:19];
 		}
-		[self setText:travelTimeLine forRow:19];
+		else
+		{
+			[self setText:DESC(@"long-range-chart-system-unreachable")  forRow:18];
+		}
 	}
-	else
-	{
-		[self setText:DESC(@"long-range-chart-system-unreachable")  forRow:18];
-	}
-	
+
 	OOGL(glColor4f(0.0f, 1.0f, 0.0f, alpha));	//	green
 	OOGL(glLineWidth(2.0f));
 	cu = NSMakePoint((float)(hscale*galaxy_coordinates.x+hoffset),(float)(vscale*galaxy_coordinates.y+voffset));
@@ -1712,21 +1823,16 @@ static OOTextureSprite *NewTextureSpriteWithDescriptor(NSDictionary *descriptor)
 	// draw marks
 	//
 	OOGL(glLineWidth(1.5f));
-	OOGL(glColor4f(1.0f, 0.0f, 0.0f, alpha));
 	for (i = 0; i < 256; i++)
 	{
 		g_seed = [UNIVERSE systemSeedForSystemNumber:i];
-		BOOL mark = [markedDestinations oo_boolAtIndex:i];
-		if (mark)
+		NSArray *markers = [markedDestinations objectForKey:[NSNumber numberWithInt:i]];
+		if (markers != nil)
 		{
 			star.x = (float)(g_seed.d * hscale + hoffset);
 			star.y = (float)(g_seed.b * vscale + voffset);
-			OOGLBEGIN(GL_LINES);
-				glVertex3f(x + star.x - 2.5f,	y + star.y - 2.5f,	z);
-				glVertex3f(x + star.x + 2.5f,	y + star.y + 2.5f,	z);
-				glVertex3f(x + star.x - 2.5f,	y + star.y + 2.5f,	z);
-				glVertex3f(x + star.x + 2.5f,	y + star.y - 2.5f,	z);
-			OOGLEND();
+			
+			[self drawSystemMarkers:markers atX:x+star.x andY:y+star.y andZ:z withAlpha:alpha andScale:2.5f];
 		}
 	}
 	

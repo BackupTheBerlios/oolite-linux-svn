@@ -27,10 +27,12 @@ MA 02110-1301, USA.
 #import "OOJSEntity.h"
 #import "OOJSShip.h"
 #import "OOJSVector.h"
+#import "OOJSQuaternion.h"
 #import "OOJavaScriptEngine.h"
 #import "EntityOOJavaScriptExtensions.h"
 
 #import "PlayerEntity.h"
+#import "PlayerEntityControls.h"
 #import "PlayerEntityContracts.h"
 #import "PlayerEntityScriptMethods.h"
 #import "PlayerEntityLegacyScriptEngine.h"
@@ -60,6 +62,10 @@ static JSBool PlayerShipAwardEquipmentToCurrentPylon(JSContext *context, uintN a
 static JSBool PlayerShipAddPassenger(JSContext *context, uintN argc, jsval *vp);
 static JSBool PlayerShipRemovePassenger(JSContext *context, uintN argc, jsval *vp);
 static JSBool PlayerShipAwardContract(JSContext *context, uintN argc, jsval *vp);
+static JSBool PlayerShipSetCustomView(JSContext *context, uintN argc, jsval *vp);
+static JSBool PlayerShipResetCustomView(JSContext *context, uintN argc, jsval *vp);
+static JSBool PlayerShipTakeInternalDamage(JSContext *context, uintN argc, jsval *vp);
+
 
 static BOOL ValidateContracts(JSContext *context, uintN argc, jsval *vp, BOOL isCargo, OOSystemID *start, OOSystemID *destination, double *eta, double *fee);
 
@@ -88,6 +94,7 @@ enum
 	kPlayerShip_aftShieldRechargeRate,			// aft shield recharge rate, positive float, read-only
 	kPlayerShip_compassMode,					// compass mode, string, read-only
 	kPlayerShip_compassTarget,					// object targeted by the compass, entity, read-only
+	kPlayerShip_currentWeapon,      // shortcut property to _aftWeapon, etc. overrides kShip generic version
 	kPlayerShip_crosshairs,					// custom plist file defining crosshairs
 	kPlayerShip_cursorCoordinates,				// cursor coordinates (unscaled), Vector3D, read only
 	kPlayerShip_cursorCoordinatesInLY,			// cursor coordinates (in LY), Vector3D, read only
@@ -103,11 +110,12 @@ enum
 	kPlayerShip_galaxyCoordinatesInLY,			// galaxy coordinates (in LY), Vector3D, read only
 	kPlayerShip_hud,							// hud name identifier, string, read/write
 	kPlayerShip_hudHidden,						// hud visibility, boolean, read/write
-	kPlayerShip_laserHeatLevel,					// laser temperature, float, read-only
 	kPlayerShip_maxAftShield,					// maximum aft shield charge level, positive float, read-only
 	kPlayerShip_maxForwardShield,				// maximum forward shield charge level, positive float, read-only
+	kPlayerShip_pitch,        // pitch (overrules Ship)
 	kPlayerShip_price,				// idealised trade-in value decicredits, positive int, read-only
 	kPlayerShip_reticleTargetSensitive,			// target box changes color when primary target in crosshairs, boolean, read/write
+	kPlayerShip_roll,        // roll (overrules Ship)
 	kPlayerShip_scoopOverride,					// Scooping
 	kPlayerShip_serviceLevel,				// servicing level, positive int 75-100, read-only
 	kPlayerShip_specialCargo,					// special cargo, string, read-only
@@ -115,6 +123,7 @@ enum
 	kPlayerShip_viewDirection,					// view direction identifier, string, read-only
 //	kPlayerShip_weaponFacings,         // available weapon facings, int, read-only
 	kPlayerShip_weaponsOnline,					// weapons online status, boolean, read-only
+	kPlayerShip_yaw,        // yaw (overrules Ship)
 };
 
 
@@ -125,6 +134,7 @@ static JSPropertySpec sPlayerShipProperties[] =
 	{ "aftShieldRechargeRate",			kPlayerShip_aftShieldRechargeRate,			OOJS_PROP_READONLY_CB },
 	{ "compassMode",					kPlayerShip_compassMode,					OOJS_PROP_READONLY_CB },
 	{ "compassTarget",					kPlayerShip_compassTarget,					OOJS_PROP_READONLY_CB },
+	{ "currentWeapon",					kPlayerShip_currentWeapon,					OOJS_PROP_READWRITE_CB },
 	{ "crosshairs",				kPlayerShip_crosshairs,				OOJS_PROP_READWRITE_CB },
 	{ "cursorCoordinates",				kPlayerShip_cursorCoordinates,				OOJS_PROP_READONLY_CB },
 	{ "cursorCoordinatesInLY",			kPlayerShip_cursorCoordinatesInLY,			OOJS_PROP_READONLY_CB },
@@ -141,11 +151,12 @@ static JSPropertySpec sPlayerShipProperties[] =
 	{ "hud",							kPlayerShip_hud,							OOJS_PROP_READWRITE_CB },
 	{ "hudHidden",						kPlayerShip_hudHidden,						OOJS_PROP_READWRITE_CB },
 	// manifest defined in OOJSManifest.m
-	{ "laserHeatLevel",					kPlayerShip_laserHeatLevel,					OOJS_PROP_READONLY_CB },
 	{ "maxAftShield",					kPlayerShip_maxAftShield,					OOJS_PROP_READONLY_CB },
 	{ "maxForwardShield",				kPlayerShip_maxForwardShield,				OOJS_PROP_READONLY_CB },
 	{ "price",							kPlayerShip_price,							OOJS_PROP_READONLY_CB },
+	{ "pitch",							kPlayerShip_pitch,							OOJS_PROP_READONLY_CB },
 	{ "reticleTargetSensitive",			kPlayerShip_reticleTargetSensitive,			OOJS_PROP_READWRITE_CB },
+	{ "roll",							kPlayerShip_roll,							OOJS_PROP_READONLY_CB },
 	{ "scoopOverride",					kPlayerShip_scoopOverride,					OOJS_PROP_READWRITE_CB },
 	{ "serviceLevel",					kPlayerShip_serviceLevel,					OOJS_PROP_READWRITE_CB },
 	{ "specialCargo",					kPlayerShip_specialCargo,					OOJS_PROP_READONLY_CB },
@@ -153,6 +164,7 @@ static JSPropertySpec sPlayerShipProperties[] =
 	{ "viewDirection",					kPlayerShip_viewDirection,					OOJS_PROP_READONLY_CB },
 //	{ "weaponFacings",					kPlayerShip_weaponFacings,					OOJS_PROP_READONLY_CB },
 	{ "weaponsOnline",					kPlayerShip_weaponsOnline,					OOJS_PROP_READONLY_CB },
+	{ "yaw",							kPlayerShip_yaw,							OOJS_PROP_READONLY_CB },
 	{ 0 }			
 };
 
@@ -168,6 +180,9 @@ static JSFunctionSpec sPlayerShipMethods[] =
 	{ "launch",							PlayerShipLaunch,							0 },
 	{ "removeAllCargo",					PlayerShipRemoveAllCargo,					0 },
 	{ "removePassenger",				PlayerShipRemovePassenger,					1 },
+	{ "resetCustomView",				PlayerShipResetCustomView,					0 },
+	{ "setCustomView",				PlayerShipSetCustomView,					2 },
+	{ "takeInternalDamage",				PlayerShipTakeInternalDamage,					0 },
 	{ "useSpecialCargo",				PlayerShipUseSpecialCargo,					1 },
 	{ 0 }
 };
@@ -294,9 +309,6 @@ static JSBool PlayerShipGetProperty(JSContext *context, JSObject *this, jsid pro
 		case kPlayerShip_aftShield:
 			return JS_NewNumberValue(context, [player aftShieldLevel], value);
 			
-		case kPlayerShip_laserHeatLevel:
-			return JS_NewNumberValue(context, [player laserHeatLevel], value);
-			
 		case kPlayerShip_maxForwardShield:
 			return JS_NewNumberValue(context, [player maxForwardShieldLevel], value);
 			
@@ -343,7 +355,7 @@ static JSBool PlayerShipGetProperty(JSContext *context, JSObject *this, jsid pro
 		case kPlayerShip_crosshairs:
 			result = [[player hud] crosshairDefinition];
 			break;
-			
+
 		case kPlayerShip_hudHidden:
 			*value = OOJSValueFromBOOL([[player hud] isHidden]);
 			return YES;
@@ -356,14 +368,46 @@ static JSBool PlayerShipGetProperty(JSContext *context, JSObject *this, jsid pro
 			*value = OOJSValueFromViewID(context, [UNIVERSE viewDirection]);
 			return YES;
 
-//		case kPlayerShip_weaponFacings:
-//			return JS_NewNumberValue(context, [player availableFacings], value);
+		case kPlayerShip_currentWeapon:
+			switch ([player currentWeaponFacing])
+			{
+			case VIEW_FORWARD:
+				result = [player weaponTypeForFacing:WEAPON_FACING_FORWARD];
+				break;
+			case VIEW_AFT:
+				result = [player weaponTypeForFacing:WEAPON_FACING_AFT];
+				break;
+			case VIEW_PORT:
+				result = [player weaponTypeForFacing:WEAPON_FACING_PORT];
+				break;
+			case VIEW_STARBOARD:
+				result = [player weaponTypeForFacing:WEAPON_FACING_STARBOARD];
+				break;
+			case VIEW_CUSTOM:
+			case VIEW_NONE:
+			case VIEW_GUI_DISPLAY:
+			case VIEW_BREAK_PATTERN:
+				result = nil;
+			}
+			break;
 		
 	  case kPlayerShip_price:
 			return JS_NewNumberValue(context, [UNIVERSE tradeInValueForCommanderDictionary:[player commanderDataDictionary]], value);
 
 	  case kPlayerShip_serviceLevel:
 			return JS_NewNumberValue(context, [player tradeInFactor], value);
+
+			// make roll, pitch, yaw reported to JS use same +/- convention as
+			// for NPC ships
+		case kPlayerShip_pitch:
+			return JS_NewNumberValue(context, -[player flightPitch], value);
+
+		case kPlayerShip_roll:
+			return JS_NewNumberValue(context, -[player flightRoll], value);
+
+		case kPlayerShip_yaw:
+			return JS_NewNumberValue(context, -[player flightYaw], value);
+
 
 		default:
 			OOJSReportBadPropertySelector(context, this, propID, sPlayerShipProperties);
@@ -510,7 +554,39 @@ static JSBool PlayerShipSetProperty(JSContext *context, JSObject *this, jsid pro
 				return YES;
 			}
 			
-		
+		case kPlayerShip_currentWeapon:
+		{
+			BOOL exists = NO;
+			sValue = JSValueToEquipmentKeyRelaxed(context, *value, &exists);
+			if (!exists || sValue == nil) 
+			{
+				sValue = @"EQ_WEAPON_NONE";
+			}
+			switch ([player currentWeaponFacing])
+			{
+			case VIEW_FORWARD:
+				[player setWeaponMount:WEAPON_FACING_FORWARD toWeapon:sValue];
+				break;
+			case VIEW_AFT:
+				[player setWeaponMount:WEAPON_FACING_AFT toWeapon:sValue];
+				break;
+			case VIEW_PORT:
+				[player setWeaponMount:WEAPON_FACING_PORT toWeapon:sValue];
+				break;
+			case VIEW_STARBOARD:
+				[player setWeaponMount:WEAPON_FACING_STARBOARD toWeapon:sValue];
+				break;
+			case VIEW_CUSTOM: // in this context does not actually mean custom view
+			case VIEW_NONE:
+			case VIEW_GUI_DISPLAY:
+			case VIEW_BREAK_PATTERN:
+				OOJSReportError(context, @"player.ship.currentWeapon is only valid when a weapon view is active.", OOStringFromJSPropertyIDAndSpec(context, propID, sPlayerShipProperties));
+				return NO;
+			}
+
+			return YES;
+			break;
+		}
 		default:
 			OOJSReportBadPropertySelector(context, this, propID, sPlayerShipProperties);
 			return NO;
@@ -744,6 +820,99 @@ static JSBool PlayerShipAwardContract(JSContext *context, uintN argc, jsval *vp)
 	BOOL OK = [player awardContract:qty commodity:key start:start destination:destination eta:eta fee:fee];
 	OOJS_RETURN_BOOL(OK);
 	
+	OOJS_NATIVE_EXIT
+}
+
+
+static JSBool PlayerShipSetCustomView(JSContext *context, uintN argc, jsval *vp)
+{
+	OOJS_NATIVE_ENTER(context)
+	
+	PlayerEntity		*player = OOPlayerForScripting();
+	
+	if (argc < 2)
+	{
+		OOJSReportBadArguments(context, @"PlayerShip", @"setCustomView", argc, OOJS_ARGV, nil, @"position, orientiation, [weapon]");
+		return NO;
+	}
+
+// must be in custom view
+	if ([UNIVERSE viewDirection] != VIEW_CUSTOM) 
+	{
+		OOJSReportError(context, @"PlayerShip.setCustomView only works when custom view is active.");
+		return NO;
+	}
+
+	NSMutableDictionary			*viewData = [NSMutableDictionary dictionaryWithCapacity:3];
+
+	Vector position = kZeroVector;
+	BOOL gotpos = JSValueToVector(context, OOJS_ARGV[0], &position);
+	if (!gotpos)
+	{
+		OOJSReportBadArguments(context, @"PlayerShip", @"setCustomView", argc, OOJS_ARGV, nil, @"position, orientiation, [weapon]");
+		return NO;
+	}
+	NSString *positionstr = [[NSString alloc] initWithFormat:@"%f %f %f",position.x,position.y,position.z];   
+
+	Quaternion orientation = kIdentityQuaternion;
+	BOOL gotquat = JSValueToQuaternion(context, OOJS_ARGV[1], &orientation);
+	if (!gotquat)
+	{
+		OOJSReportBadArguments(context, @"PlayerShip", @"setCustomView", argc, OOJS_ARGV, nil, @"position, orientiation, [weapon]");
+		return NO;
+	}
+	NSString *orientationstr = [[NSString alloc] initWithFormat:@"%f %f %f %f",orientation.w,orientation.x,orientation.y,orientation.z];
+
+	[viewData setObject:positionstr forKey:@"view_position"];
+	[viewData setObject:orientationstr forKey:@"view_orientation"];
+
+	if (argc > 2)
+	{
+		NSString* facing = OOStringFromJSValue(context,OOJS_ARGV[2]);
+		[viewData setObject:facing forKey:@"weapon_facing"];
+	} 
+
+	[player setCustomViewDataFromDictionary:viewData];
+	[player noteSwitchToView:VIEW_CUSTOM fromView:VIEW_CUSTOM];
+
+	[positionstr release];
+	[orientationstr release];
+
+	OOJS_RETURN_BOOL(YES);
+	OOJS_NATIVE_EXIT
+}
+
+
+static JSBool PlayerShipResetCustomView(JSContext *context, uintN argc, jsval *vp)
+{
+	OOJS_NATIVE_ENTER(context)
+	
+	PlayerEntity		*player = OOPlayerForScripting();
+	
+// must be in custom view
+	if ([UNIVERSE viewDirection] != VIEW_CUSTOM) 
+	{
+		OOJSReportError(context, @"PlayerShip.setCustomView only works when custom view is active.");
+		return NO;
+	}
+
+	[player resetCustomView];
+	[player noteSwitchToView:VIEW_CUSTOM fromView:VIEW_CUSTOM];
+
+	OOJS_RETURN_BOOL(YES);
+	OOJS_NATIVE_EXIT
+}
+
+
+static JSBool PlayerShipTakeInternalDamage(JSContext *context, uintN argc, jsval *vp)
+{
+	OOJS_NATIVE_ENTER(context)
+	
+	PlayerEntity		*player = OOPlayerForScripting();
+	
+	BOOL took = [player takeInternalDamage];
+
+	OOJS_RETURN_BOOL(took);
 	OOJS_NATIVE_EXIT
 }
 

@@ -132,6 +132,9 @@
 	display.mode.switch.failed				= $error;
 	display.mode.unknown					= $error;
 	display.initGL							= no;
+
+	effectData.load.begin						= yes;
+	effectData.load.done						= no;
 	
 	
 	$linkedListError						= $error;
@@ -150,7 +153,7 @@
 	equip.buy.mounted						= no;
 	equip.buy.mounted.failed				= $scriptError;
 	
-	exit.context							= no;		// Log why game quit, for debugging cases of game quitting in an orderly yet unexpcted way.
+	exit.context							= no;		// Log why game quit, for debugging cases of game quitting in an orderly yet unexpected way.
 	
 	fuelPrices								= no;
 	
@@ -162,6 +165,7 @@
 	input.keyMapping.keyPress				= no;
 	input.keyMapping.keyPress.keyDown		= inherit;
 	input.keyMapping.keyPress.keyUp			= inherit;
+	input.mouseMode.changed					= no;
 	
 	
 	joystick.init							= yes;	// SDL only
@@ -189,7 +193,7 @@
 	mesh.load.error.tooManyFaces			= inherit;
 	
 	
-	missile.damage.calc		= no; // Debugging of missile damage curves
+	missile.damage.calc						= no; // Debugging of missile damage curves
 	
 	
 	oxp.versionMismatch						= $error;
@@ -316,7 +320,7 @@
 	/*
 		"Trace" events for legacy and JavaScript scripts. These indicate when
 		a JavaScript method or legacy script is called by the game, and should
-		not be confused with the confusingly-names script.debug.trace (which
+		not be confused with the confusingly-named script.debug.trace (which
 		shows the precise sequence of commands issued by legacy scripts) or
 		the JavaScript trace facility (part of the Debug OXP).
 	*/
@@ -408,7 +412,8 @@
 	
 	
 	startup.progress						= no;					// Startup progress stages. These are shown on-screen on Macs and of little interest otherwise.
-	
+
+	station.launchShip.impossible = no; // generally cancelled launches due to station having no launch docks are uninteresting	
 	
 	strings.conversion						= $scriptError;			// Conversion of text to values (vectors, quaternions etc)
 	strings.conversion.vector				= inherit;
@@ -453,9 +458,5 @@
 	
 	
 	/*** Mac OS X/Cocoa-specific ***/
-	growl.error								= $error;
-	growl.debug								= no;
-	
-	
 	iTunesIntegration.failed				= $error;
 }

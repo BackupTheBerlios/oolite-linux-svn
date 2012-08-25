@@ -131,6 +131,12 @@ static NSString * const kOOLogEntityUpdateError				= @"entity.linkedList.update.
 }
 
 
+- (BOOL)isDock
+{
+	return NO;
+}
+
+
 - (BOOL)isStation
 {
 	return isStation;
@@ -179,6 +185,12 @@ static NSString * const kOOLogEntityUpdateError				= @"entity.linkedList.update.
 
 
 - (BOOL) isEffect
+{
+	return NO;
+}
+
+
+- (BOOL) isVisualEffect
 {
 	return NO;
 }
@@ -582,6 +594,19 @@ static NSString * const kOOLogEntityUpdateError				= @"entity.linkedList.update.
 }
 
 
+- (Vector) position
+{
+	return position;
+}
+
+
+// Exposed to uniform bindings.
+- (Vector) relativePosition
+{
+	return vector_subtract([self position], [PLAYER position]);
+}
+
+
 - (void) setPosition:(Vector) posn
 {
 	position = posn;
@@ -607,12 +632,10 @@ static NSString * const kOOLogEntityUpdateError				= @"entity.linkedList.update.
 	Vector		abspos = vector_add(position, OOVectorMultiplyMatrix(offset, rotMatrix));
 	Entity		*last = nil;
 	Entity		*father = [self parentEntity];
-	OOMatrix	r_mat;
 	
-	while ((father)&&(father != last)  && (father != NO_TARGET))
+	while (father != nil && father != last)
 	{
-		r_mat = [father drawRotationMatrix];
-		abspos = vector_add(OOVectorMultiplyMatrix(abspos, r_mat), [father position]);
+		abspos = vector_add(OOVectorMultiplyMatrix(abspos, [father drawRotationMatrix]), [father position]);
 		last = father;
 		if (![last isSubEntity]) break;
 		father = [father owner];
@@ -624,6 +647,12 @@ static NSString * const kOOLogEntityUpdateError				= @"entity.linkedList.update.
 - (double) zeroDistance
 {
 	return zero_distance;
+}
+
+
+- (double) camZeroDistance
+{
+	return cam_zero_distance;
 }
 
 
@@ -788,13 +817,11 @@ static NSString * const kOOLogEntityUpdateError				= @"entity.linkedList.update.
 }
 
 
-- (void) moveForward:(double) amount
+- (void) moveForward:(double)amount
 {
-	Vector		forward = vector_forward_from_quaternion(orientation);
+	Vector forward = vector_multiply_scalar(vector_forward_from_quaternion(orientation), amount);
+	position = vector_add(position, forward);
 	distanceTravelled += amount;
-	position.x += amount * forward.x;
-	position.y += amount * forward.y;
-	position.z += amount * forward.z;
 }
 
 
@@ -821,12 +848,6 @@ static NSString * const kOOLogEntityUpdateError				= @"entity.linkedList.update.
 {
 	OOMatrix result = rotMatrix;
 	return OOMatrixTranslate(result, position);
-}
-
-
-- (Vector) position
-{
-	return position;
 }
 
 
@@ -861,15 +882,18 @@ static NSString * const kOOLogEntityUpdateError				= @"entity.linkedList.update.
 		if ([self isSubEntity])
 		{
 			zero_distance = [[self owner] zeroDistance];
+			cam_zero_distance = [[self owner] camZeroDistance];
 		}
 		else
 		{
 			zero_distance = distance2(PLAYER->position, position);
+			cam_zero_distance = distance2([PLAYER viewpointPosition], position);
 		}
 	}
 	else
 	{
 		zero_distance = magnitude2(position);
+		cam_zero_distance = zero_distance;
 	}
 	
 	hasMoved = !vector_equal(position, lastPosition);
@@ -1024,7 +1048,7 @@ static NSString * const kOOLogEntityUpdateError				= @"entity.linkedList.update.
 
 - (BOOL) isVisible
 {
-	return zero_distance <= ABSOLUTE_NO_DRAW_DISTANCE2;
+	return cam_zero_distance <= ABSOLUTE_NO_DRAW_DISTANCE2;
 }
 
 @end

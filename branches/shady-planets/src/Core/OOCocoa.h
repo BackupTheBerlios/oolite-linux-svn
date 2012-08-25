@@ -70,6 +70,10 @@ MA 02110-1301, USA.
 	#if defined MAC_OS_X_VERSION_10_7 && MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_7
 		#define OOLITE_MAC_OS_X_10_7	1
 	#endif
+	
+	#if defined MAC_OS_X_VERSION_10_8 && MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_8
+		#define OOLITE_MAC_OS_X_10_8	1
+	#endif
 #endif
 
 
@@ -83,6 +87,10 @@ MA 02110-1301, USA.
 
 #ifndef OOLITE_MAC_OS_X_10_7
 	#define OOLITE_MAC_OS_X_10_7	0
+#endif
+
+#ifndef OOLITE_MAC_OS_X_10_8
+	#define OOLITE_MAC_OS_X_10_8	0
 #endif
 
 
@@ -230,6 +238,9 @@ enum {
 #ifndef OOLITE_HAVE_APPKIT
 #define OOLITE_HAVE_APPKIT		0
 #endif
+
+
+#define OOLITE_PROPERTY_SYNTAX	(OOLITE_MAC_OS_X || defined(__OBJC2__))
 
 
 // When Oolite-Linux used AppKit, the load/save dialogs didn't work well with the SDL window, so we use a separate macro for this.
@@ -424,6 +435,43 @@ enum {
 #define OOLITE_OPTIONAL(protocolName) @optional
 #else
 #define OOLITE_OPTIONAL(protocolName) @end @interface NSObject (protocolName ## Optional)
+#endif
+
+
+/*	instancetype contextual keyword; added in Clang 3.0ish.
+	
+	Pseudo-type indicating that the return value of an instance method is an
+	instance of the same class as the receiver, or for a class mothod, is an
+	instance of that class.
+	
+	For example, given:
+		@interface Foo: NSObject
+		+ (instancetype) fooWithProperty:(id)property;
+		@end
+		
+		@interface Bar: Foo
+		@end
+	
+	the type of [Bar fooWithProperty] is inferred to be Bar *.
+	
+	Clang treats methods of type id as instancetype when their names begin with
+	+alloc, +new, -init, -autorelease, -retain, or -self.
+	
+	For compilers without instancetype support, id is appropriate but less
+	type-safe.
+	
+	NOTE: it is not appropriate to use instancetype for a factory method which
+	chooses which publicly-visible subclass to instantiate based on parameters.
+	For instance, calling one of the OOMaterial convenience factory methods on
+	OOShaderMaterial might return an OOSingleTextureMaterial, so the correct
+	return type is either OOMaterial or id.
+	On the other hand, it is appropriate on factory methods which just wrap
+	the corresponding -init and/or -init + configuration through properties.
+	(Such factory methods should be implemented in terms of [[self alloc]
+	init...].)
+*/
+#if __OBJC__ && !__has_feature(objc_instancetype)
+typedef id instancetype;
 #endif
 
 

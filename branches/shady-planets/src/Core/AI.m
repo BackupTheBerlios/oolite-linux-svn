@@ -31,10 +31,6 @@ MA 02110-1301, USA.
 
 #import "ShipEntity.h"
 
-#ifdef OO_BRAIN_AI
-#import "OOInstinct.h"
-#endif
-
 #define kOOLogUnconvertedNSLog @"unclassified.AI"
 
 
@@ -100,15 +96,16 @@ extern void GenerateGraphVizForAIStateMachine(NSDictionary *stateMachine, NSStri
 
 - (id) init
 {
-	self = [super init];
-	
-	aiStack = [[NSMutableArray alloc] init];
-	pendingMessages = [[NSMutableSet alloc] init];
-	
-	nextThinkTime = INFINITY;	// don't think for a while
-	thinkTimeInterval = AI_THINK_INTERVAL;
-	
-	stateMachineName = [[NSString stringWithString:@"<no AI>"] retain];	// no initial brain
+	if ((self = [super init]))
+	{
+		aiStack = [[NSMutableArray alloc] init];
+		pendingMessages = [[NSMutableSet alloc] init];
+		
+		nextThinkTime = INFINITY;	// don't think for a while
+		thinkTimeInterval = AI_THINK_INTERVAL;
+		
+		stateMachineName = @"<no AI>";	// no initial brain
+	}
 	
 	return self;
 }
@@ -116,10 +113,11 @@ extern void GenerateGraphVizForAIStateMachine(NSDictionary *stateMachine, NSStri
 
 - (id) initWithStateMachine:(NSString *) smName andState:(NSString *) stateName
 {
-	self = [self init];
-	
-	if (smName != nil)  [self setStateMachine:smName];
-	if (stateName != nil)  currentState = [stateName retain];
+	if ((self = [self init]))
+	{
+		if (smName != nil)  [self setStateMachine:smName];
+		if (stateName != nil)  currentState = [stateName retain];
+	}
 	
 	return self;
 }
@@ -151,20 +149,6 @@ extern void GenerateGraphVizForAIStateMachine(NSDictionary *stateMachine, NSStri
 {
 	return [NSString stringWithFormat:@"%@:%@", stateMachineName, currentState];
 }
-
-
-#ifdef OO_BRAIN_AI
-- (OOInstinct *) rulingInstinct
-{
-	return rulingInstinct;
-}
-
-
-- (void) setRulingInstinct:(OOInstinct*) instinct
-{
-	rulingInstinct = instinct;
-}
-#endif
 
 
 - (ShipEntity *)owner
@@ -397,14 +381,13 @@ static AIStackElement *sStack = NULL;
 	static unsigned	recursionLimiter = 0;
 	AI				*previousRunning = sCurrentlyRunningAI;
 	
-	
 	/*	CRASH in _freedHandler when called via -setState: __NSFireDelayedPerform (1.69, OS X/x86).
 		Analysis: owner invalid.
 		Fix: make owner an OOWeakReference.
 		 -- Ahruman, 20070706
 	*/
 	if (message == nil || owner == nil || [owner universalID] == NO_TARGET)  return;
-	
+
 #ifndef NDEBUG
 	// Push debug stack frame.
 	if (debugContext == nil)  debugContext = @"unspecified";
@@ -458,10 +441,6 @@ static AIStackElement *sStack = NULL;
 	
 	actions = [[[messagesForState objectForKey:message] copy] autorelease];
 	
-#ifdef OO_BRAIN_AI
-	if (rulingInstinct != nil)  [rulingInstinct freezeShipVars];	// preserve the pre-thinking state
-#endif
-	
 	sCurrentlyRunningAI = self;
 	if ([actions count] > 0)
 	{
@@ -493,24 +472,12 @@ static AIStackElement *sStack = NULL;
 	// Unwind stack.
 	if (sStack != NULL)  sStack = sStack->back;
 #endif
-	
-#ifdef OO_BRAIN_AI
-	if (rulingInstinct != nil)
-	{
-		[rulingInstinct getShipVars];		// record the post-thinking state
-		[rulingInstinct unfreezeShipVars];	// restore the pre-thinking state (AI is now abstract thought = instincts motivate)
-	}
-#endif
 }
 
 
 - (void) takeAction:(NSString *) action
 {
-	NSArray			*tokens = ScanTokensFromString(action);
-	NSString		*dataString = nil;
-	NSString		*selectorStr;
-	SEL				selector;
-	ShipEntity		*owner = [self owner];
+	ShipEntity *owner = [self owner];
 	
 #ifndef NDEBUG
 	BOOL report = [owner reportAIMessages];
@@ -521,33 +488,35 @@ static AIStackElement *sStack = NULL;
 	}
 #endif
 	
-	if ([tokens count] != 0)
+	NSArray *tokens = ScanTokensFromString(action);
+	OOUInteger tokenCount = [tokens count];
+	
+	if (tokenCount != 0)
 	{
-		selectorStr = [tokens objectAtIndex:0];
+		NSString *selectorStr = [tokens objectAtIndex:0];
 		
 		if (owner != nil)
 		{
-			if ([tokens count] > 1)
+			NSString *dataString = nil;
+			
+			if (tokenCount == 2)
 			{
-				dataString = [[tokens subarrayWithRange:NSMakeRange(1, [tokens count] - 1)] componentsJoinedByString:@" "];
+				dataString = [tokens objectAtIndex:1];
+			}
+			else if ([tokens count] > 1)
+			{
+				dataString = [[tokens subarrayWithRange:NSMakeRange(1, tokenCount - 1)] componentsJoinedByString:@" "];
 			}
 			
-			selector = NSSelectorFromString(selectorStr);
+			SEL selector = NSSelectorFromString(selectorStr);
 			if ([owner respondsToSelector:selector])
 			{
-				if (dataString)  [owner performSelector:selector withObject:dataString];
+				if (dataString != nil)  [owner performSelector:selector withObject:dataString];
 				else  [owner performSelector:selector];
 			}
 			else
 			{
-				if ([selectorStr isEqual:@"debugMessage:"])
-				{
-					OOLog(@"ai.takeAction.debugMessage", @"DEBUG: AI MESSAGE from %@: %@", ownerDesc, dataString);
-				}
-				else
-				{
-					OOLogERR(@"ai.takeAction.badSelector", @"in AI %@ in state %@: %@ does not respond to %@", stateMachineName, currentState, ownerDesc, selectorStr);
-				}
+				OOLogERR(@"ai.takeAction.badSelector", @"in AI %@ in state %@: %@ does not respond to %@", stateMachineName, currentState, ownerDesc, selectorStr);
 			}
 		}
 		else
@@ -686,19 +655,6 @@ static AIStackElement *sStack = NULL;
 {
 	OOLog(@"dumpState.ai", @"State machine name: %@", stateMachineName);
 	OOLog(@"dumpState.ai", @"Current state: %@", currentState);
-#ifdef OO_BRAIN_AI
-	if (rulingInstinct!= nil && OOLogWillDisplayMessagesInClass(@"dumpState.ai.instinct"))
-	{
-		OOLog(@"dumpState.ai.instinct", @"Ruling instinct:");
-		OOLogPushIndent();
-		OOLogIndent();
-		NS_DURING
-			[rulingInstinct dumpState];
-		NS_HANDLER
-		NS_ENDHANDLER
-		OOLogPopIndent();
-	}
-#endif
 	OOLog(@"dumpState.ai", @"Next think time: %g", nextThinkTime);
 	OOLog(@"dumpState.ai", @"Next think interval: %g", thinkTimeInterval);
 }

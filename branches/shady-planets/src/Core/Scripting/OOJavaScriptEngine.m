@@ -45,6 +45,8 @@ MA 02110-1301, USA.
 #import "OOJSEntity.h"
 #import "OOJSShip.h"
 #import "OOJSStation.h"
+#import "OOJSDock.h"
+#import "OOJSVisualEffect.h"
 #import "OOJSPlayer.h"
 #import "OOJSPlayerShip.h"
 #import "OOJSManifest.h"
@@ -233,7 +235,7 @@ static void ReportJSError(JSContext *context, const char *message, JSErrorReport
 
 @implementation OOJavaScriptEngine
 
-+ (OOJavaScriptEngine *)sharedEngine
++ (OOJavaScriptEngine *) sharedEngine
 {
 	if (sSharedEngine == nil)  sSharedEngine = [[self alloc] init];
 	
@@ -344,6 +346,8 @@ static void ReportJSError(JSContext *context, const char *message, JSErrorReport
 	InitOOJSEntity(gOOJSMainThreadContext, _globalObject);
 	InitOOJSShip(gOOJSMainThreadContext, _globalObject);
 	InitOOJSStation(gOOJSMainThreadContext, _globalObject);
+	InitOOJSDock(gOOJSMainThreadContext, _globalObject);
+	InitOOJSVisualEffect(gOOJSMainThreadContext, _globalObject);
 	InitOOJSPlayer(gOOJSMainThreadContext, _globalObject);
 	InitOOJSPlayerShip(gOOJSMainThreadContext, _globalObject);
 	InitOOJSManifest(gOOJSMainThreadContext, _globalObject);
@@ -876,7 +880,7 @@ NSString *OOJSDescribeLocation(JSContext *context, JSStackFrame *stackFrame)
 	const char	*fileName;
 	OOUInteger	lineNo;
 	GetLocationNameAndLine(context, stackFrame, &fileName, &lineNo);
-	if (fileName == NULL)  return NO;
+	if (fileName == NULL)  return nil;
 	
 	// If this stops working, we probably need to switch to strcmp().
 	if (fileName == sConsoleScriptName && lineNo >= sConsoleEvalLineNo)  return @"<console input>";
@@ -889,7 +893,7 @@ NSString *OOJSDescribeLocation(JSContext *context, JSStackFrame *stackFrame)
 	NSString	*shortFileName = [fileNameObj lastPathComponent];
 	if (![[shortFileName lowercaseString] isEqualToString:@"script.js"])  fileNameObj = shortFileName;
 	
-	return [NSString stringWithFormat:@"%@:%u", fileNameObj, lineNo];
+	return [NSString stringWithFormat:@"%@:%lu", fileNameObj, lineNo];
 }
 
 
@@ -1678,19 +1682,7 @@ NSString *OOJSDescribeValue(JSContext *context, jsval value, BOOL abbreviateObje
 
 @implementation NSString (OOJavaScriptExtensions)
 
-+ (id) stringOrNilWithJavaScriptValue:(jsval)value inContext:(JSContext *)context
-{
-	return OOStringFromJSValue(context, value);
-}
-
-
-+ (id) stringWithJavaScriptValue:(jsval)value inContext:(JSContext *)context
-{
-	return OOStringFromJSValueEvenIfNull(context, value);
-}
-
-
-+ (id) stringWithJavaScriptParameters:(jsval *)params count:(uintN)count inContext:(JSContext *)context
++ (NSString *) stringWithJavaScriptParameters:(jsval *)params count:(uintN)count inContext:(JSContext *)context
 {
 	OOJS_PROFILE_ENTER
 	
@@ -1742,7 +1734,7 @@ NSString *OOJSDescribeValue(JSContext *context, jsval value, BOOL abbreviateObje
 }
 
 
-+ (id) concatenationOfStringsFromJavaScriptValues:(jsval *)values count:(size_t)count separator:(NSString *)separator inContext:(JSContext *)context
++ (NSString *) concatenationOfStringsFromJavaScriptValues:(jsval *)values count:(size_t)count separator:(NSString *)separator inContext:(JSContext *)context
 {
 	OOJS_PROFILE_ENTER
 	
@@ -1755,7 +1747,7 @@ NSString *OOJSDescribeValue(JSContext *context, jsval value, BOOL abbreviateObje
 	
 	for (i = 0; i != count; ++i)
 	{
-		element = [NSString stringWithJavaScriptValue:values[i] inContext:context];
+		element = OOStringFromJSValueEvenIfNull(context, values[i]);
 		if (result == nil)  result = [[element mutableCopy] autorelease];
 		else
 		{
@@ -2288,8 +2280,7 @@ NSDictionary *OOJSDictionaryFromStringTable(JSContext *context, jsval tableValue
 		
 		if (objKey != nil && !JSVAL_IS_VOID(value))
 		{
-			// Note: we want nulls and undefines included, so not OOStringFromJSValue().
-			objValue = [NSString stringWithJavaScriptValue:value inContext:context];
+			objValue = OOStringFromJSValueEvenIfNull(context, value);
 			
 			if (objValue != nil)
 			{
@@ -2456,7 +2447,7 @@ static id JSArrayConverter(JSContext *context, JSObject *array)
 
 static id JSStringConverter(JSContext *context, JSObject *object)
 {
-	return [NSString stringOrNilWithJavaScriptValue:OBJECT_TO_JSVAL(object) inContext:context];
+	return OOStringFromJSValue(context, OBJECT_TO_JSVAL(object));
 }
 
 

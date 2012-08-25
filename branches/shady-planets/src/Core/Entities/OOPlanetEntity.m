@@ -26,7 +26,7 @@ MA 02110-1301, USA.
 
 #if NEW_PLANETS
 
-#define NEW_ATMOSPHERE 1
+#define NEW_ATMOSPHERE 0
 
 #import "OOPlanetDrawable.h"
 
@@ -377,7 +377,7 @@ static OOColor *ColorWithHSBColor(Vector c)
 }
 
 
-- (id) miniatureVersion
+- (instancetype) miniatureVersion
 {
 	return [[[[self class] alloc] initAsMiniatureVersionOfPlanet:self] autorelease];
 }
@@ -389,10 +389,10 @@ static OOColor *ColorWithHSBColor(Vector c)
 	
 	if (EXPECT(!_miniature))
 	{
-		if (EXPECT_NOT(_atmosphereDrawable && zero_distance < _mesopause2))
+		if (EXPECT_NOT(_atmosphereDrawable && cam_zero_distance < _mesopause2))
 		{
 			NSAssert(_airColor != nil, @"Expected a non-nil air colour for normal planet. Exiting.");
-			double		alt = (sqrt(zero_distance) - collision_radius) / kMesosphere;
+			double		alt = (sqrt(cam_zero_distance) - collision_radius) / kMesosphere;
 			if (EXPECT_NOT(alt > 0 && alt <= 1.0))	// ensure aleph is clamped between 0 and 1
 			{
 				double	aleph = 1.0 - alt;
@@ -406,7 +406,7 @@ static OOColor *ColorWithHSBColor(Vector c)
 															  
 				// occlusion rate: .9 is 18 degrees after the terminus, where twilight ends.
 				// 1 is the terminus, 1.033 is 6 degrees before the terminus, where the sky begins to redden
-				double rate = (PLAYER->occlusion_dial - 0.97)/0.06; // from 0.97 to 1.03
+				double rate = ([PLAYER occlusionLevel] - 0.97)/0.06; // from 0.97 to 1.03
 
 				if (EXPECT(rate <= 1.0 && rate > 0.0))
 				{
@@ -454,9 +454,20 @@ static OOColor *ColorWithHSBColor(Vector c)
 }
 
 
+- (BOOL) isFinishedLoading
+{
+	OOMaterial *material = [self material];
+	if (material != nil && ![material isFinishedLoading])  return NO;
+	material = [self atmosphereMaterial];
+	if (material != nil && ![material isFinishedLoading])  return NO;
+	return YES;
+}
+
+
 - (void) drawEntity:(BOOL)immediate :(BOOL)translucent
 {
 	if (translucent || [UNIVERSE breakPatternHide])   return; // DON'T DRAW
+	if (_miniature && ![self isFinishedLoading])  return; // For responsiveness, don't block to draw as miniature.
 
 #if FRUSTUM_CULL
 	if (![UNIVERSE checkFrustum:position:([self radius] + ATMOSPHERE_DEPTH)]) 
@@ -470,7 +481,7 @@ static OOColor *ColorWithHSBColor(Vector c)
 	
 	if (!_miniature)
 	{
-		[_planetDrawable calculateLevelOfDetailForViewDistance:zero_distance];
+		[_planetDrawable calculateLevelOfDetailForViewDistance:cam_zero_distance];
 		[_atmosphereDrawable setLevelOfDetail:[_planetDrawable levelOfDetail]];
 	}
 	

@@ -150,6 +150,7 @@ OOLITE_DEBUG_FILES = \
     OOTCPStreamDecoderAbstractionLayer.m
 
 OOLITE_ENTITY_FILES = \
+    DockEntity.m \
     DustEntity.m \
     Entity.m \
     OOEntityWithDrawable.m \
@@ -184,7 +185,8 @@ OOLITE_ENTITY_FILES = \
     ShipEntityLoadRestore.m \
     OOLaserShotEntity.m \
     OOQuiriumCascadeEntity.m \
-    OORingEffectEntity.m
+    OORingEffectEntity.m \
+    OOVisualEffectEntity.m 
 
 OOLITE_GRAPHICS_DRAWABLE_FILES = \
     OODrawable.m \
@@ -267,6 +269,7 @@ OOLITE_SCRIPTING_FILES = \
     OOConstToJSString.m \
     OOJSCall.m \
     OOJSClock.m \
+    OOJSDock.m \
     OOJSEntity.m \
     OOJSEquipmentInfo.m \
     OOJSFunction.m \
@@ -290,6 +293,7 @@ OOLITE_SCRIPTING_FILES = \
     OOJSSystem.m \
     OOJSSystemInfo.m \
     OOJSTimer.m \
+		OOJSVisualEffect.m \
     OOJSVector.m \
     OOJSWorldScripts.m \
     OOLegacyScriptWhitelist.m \
@@ -342,6 +346,7 @@ OO_UTILITY_FILES = \
     OOShipGroup.m \
     OOStringParsing.m \
     OOWeakReference.m \
+    OOWeakSet.m \
     OOXMLExtensions.m \
     OODeepCopy.m \
     OORegExpMatcher.m \
@@ -351,6 +356,7 @@ OOLITE_MISC_FILES = \
     AI.m \
     AIGraphViz.m \
     GameController.m \
+    GameController+SDLFullScreen.m \
     OOJoystickManager.m \
     OOSDLJoystickManager.m \
     main.m \
@@ -358,6 +364,7 @@ OOLITE_MISC_FILES = \
     OOCharacter.m \
     OOCocoa.m \
     OOEquipmentType.m \
+    OOMouseInteractionMode.m \
     OORoleSet.m \
     OOShipRegistry.m \
     OOSpatialReference.m \

@@ -323,20 +323,13 @@ jsid OOJSIDFromString(NSString *string);
 @interface NSString (OOJavaScriptExtensions)
 
 // For diagnostic messages; produces things like @"(42, true, "a string", an object description)".
-+ (id) stringWithJavaScriptParameters:(jsval *)params count:(uintN)count inContext:(JSContext *)context;
++ (NSString *) stringWithJavaScriptParameters:(jsval *)params count:(uintN)count inContext:(JSContext *)context;
 
 // Concatenate sequence of arbitrary JS objects into string.
-+ (id) concatenationOfStringsFromJavaScriptValues:(jsval *)values count:(size_t)count separator:(NSString *)separator inContext:(JSContext *)context;
++ (NSString *) concatenationOfStringsFromJavaScriptValues:(jsval *)values count:(size_t)count separator:(NSString *)separator inContext:(JSContext *)context;
 
 // Add escape codes for string so that it's a valid JavaScript literal (if you put "" or '' around it).
 - (NSString *) escapedForJavaScriptLiteral;
-
-
-// Wrapper for OOStringFromJSValueEvenIfNull(). DEPRECATED
-+ (id) stringWithJavaScriptValue:(jsval)value inContext:(JSContext *)context;
-
-// Wrapper for OOStringFromJSValue(). DEPRECATED
-+ (id) stringOrNilWithJavaScriptValue:(jsval)value inContext:(JSContext *)context;
 
 @end
 
@@ -558,7 +551,7 @@ void OOJSRegisterObjectConverter(JSClass *theClass, OOJSClassConverterCallback c
 		showingLocation:(in BOOL)showLocation
 			withMessage:(in NSString *)message;
 
-// Sent for JS log messages. Note: messageClass will be nil of Log() is used rather than LogWithClass().
+// Sent for JS log messages. Note: messageClass will be nil if Log() is used rather than LogWithClass().
 - (oneway void)jsEngine:(in byref OOJavaScriptEngine *)engine
 				context:(in JSContext *)context
 			 logMessage:(in NSString *)message

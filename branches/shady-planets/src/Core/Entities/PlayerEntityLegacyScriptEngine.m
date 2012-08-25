@@ -370,7 +370,7 @@ static BOOL sRunningScript = NO;
 			}
 			else
 			{
-				OOLog(@"script.trace.legacy.runWorld.recurse", @"----- Running world script recursively.", OOStringFromEntityStatus(restoreStatus), OOStringFromEntityStatus(status));
+				OOLog(@"script.trace.legacy.runWorld.recurse", @"----- Running world script recursively.");
 			}
 		}
 		sRunningScript = YES;
@@ -548,7 +548,7 @@ static BOOL sRunningScript = NO;
 					rhsComponents = [expandedRHS componentsSeparatedByString:@","];
 					count = [rhsComponents count];
 					
-					TraceLog(kOOLogTraceTestConditionOneOf, @"performing a ONEOF comparison with %u elements: is %@ ONEOF %@ ?", count, lhsString, expandedRHS);
+					TraceLog(kOOLogTraceTestConditionOneOf, @"performing a ONEOF comparison with %lu elements: is %@ ONEOF %@ ?", count, lhsString, expandedRHS);
 					
 					whitespace = [NSCharacterSet whitespaceCharacterSet];
 					lhsString = [lhsString stringByTrimmingCharactersInSet:whitespace];
@@ -581,7 +581,7 @@ static BOOL sRunningScript = NO;
 			rhsComponents = [expandedRHS componentsSeparatedByString:@","];
 			count = [rhsComponents count];
 			
-			TraceLog(kOOLogTraceTestConditionOneOf, @"performing a ONEOF comparison with %u elements: is %@ ONEOF %@ ?", count, lhsString, expandedRHS);
+			TraceLog(kOOLogTraceTestConditionOneOf, @"performing a ONEOF comparison with %lu elements: is %@ ONEOF %@ ?", count, lhsString, expandedRHS);
 			
 			for (i = 0; i < count; i++)
 			{
@@ -1125,7 +1125,7 @@ static int scriptRandomSeed = -1;	// ensure proper random function
 
 - (NSString *) commanderName_string
 {
-	return [self playerName];
+	return [self commanderName];
 }
 
 
@@ -1813,7 +1813,7 @@ static int scriptRandomSeed = -1;	// ensure proper random function
 	}
 	else
 	{
-		OOLog(kOOLogSyntaxAdd, @"***** SCRIPT ERROR: in %@, CANNOT ADD: '%@' -- IDENTIFIER '%@' DOES NOT BEGIN WITH 'mission_' or 'local_'", CurrentScriptDesc(), missionVariableString_value);
+		OOLog(kOOLogSyntaxAdd, @"***** SCRIPT ERROR: in %@, CANNOT ADD: '%@' -- IDENTIFIER '%@' DOES NOT BEGIN WITH 'mission_' or 'local_'", CurrentScriptDesc(), missionVariableString_value, missionVariableString_value);
 	}
 }
 
@@ -1853,7 +1853,7 @@ static int scriptRandomSeed = -1;	// ensure proper random function
 	}
 	else
 	{
-		OOLog(kOOLogSyntaxSubtract, @"***** SCRIPT ERROR: in %@, CANNOT ADD: '%@' -- IDENTIFIER '%@' DOES NOT BEGIN WITH 'mission_' or 'local_'", CurrentScriptDesc(), missionVariableString_value);
+		OOLog(kOOLogSyntaxSubtract, @"***** SCRIPT ERROR: in %@, CANNOT SUBTRACT: '%@' -- IDENTIFIER '%@' DOES NOT BEGIN WITH 'mission_' or 'local_'", CurrentScriptDesc(), missionVariableString_value, missionVariableString_value);
 	}
 }
 
@@ -1932,10 +1932,10 @@ static int scriptRandomSeed = -1;	// ensure proper random function
 	
 	NSArray *choice_keys = [[choices_dict allKeys] sortedArrayUsingSelector:@selector(caseInsensitiveCompare:)];
 	
-	[gui setText:@"" forRow:21];			// clears out the 'Press spacebar' message
-	[gui setKey:@"" forRow:21];				// clears the key to enable pollDemoControls to check for a selection
+	[gui setText:@"" forRow:21];				// clears out the 'Press spacebar' message
+	[gui setKey:@"" forRow:21];					// clears the key to enable pollDemoControls to check for a selection
 	[gui setSelectableRange:NSMakeRange(0,0)];	// clears the selectable range
-	[UNIVERSE setDisplayCursor: YES];		// enables mouse selection of the choices list items
+	[UNIVERSE enterGUIViewModeWithMouseInteraction:YES]; // enables mouse selection of the choices list items
 	
 	int					choices_row = 22 - [choice_keys count];
 	NSEnumerator		*choiceEnum = nil;
@@ -1978,61 +1978,33 @@ static int scriptRandomSeed = -1;	// ensure proper random function
 
 - (void) addMissionDestination:(NSString *)destinations
 {
-	unsigned i, j;
-	int pnum, dest;
+	unsigned j;
+	int dest;
 	NSMutableArray *tokens = ScanTokensFromString(destinations);
-	BOOL addDestination;
 	
 	for (j = 0; j < [tokens count]; j++)
 	{
 		dest = [tokens oo_intAtIndex:j];
 		if (dest < 0 || dest > 255)
 			continue;
-		
-		addDestination = YES;
-		for (i = 0; i < [missionDestinations count]; i++)
-		{
-			pnum = [missionDestinations oo_intAtIndex:i];
-			if (pnum == dest)
-			{
-				addDestination = NO;
-				break;
-			}
-		}
-		
-		if (addDestination == YES)
-			[missionDestinations addObject:[NSNumber numberWithUnsignedInt:dest]];
+
+		[self addMissionDestinationMarker:[self defaultMarker:dest]];
 	}
 }
 
 
 - (void) removeMissionDestination:(NSString *)destinations
 {
-	unsigned			i, j;
-	int					pnum, dest;
+	unsigned			j;
+	int					dest;
 	NSMutableArray		*tokens = ScanTokensFromString(destinations);
-	BOOL				removeDestination;
 
 	for (j = 0; j < [tokens count]; j++)
 	{
 		dest = [[tokens objectAtIndex:j] intValue];
 		if (dest < 0 || dest > 255)  continue;
-		
-		removeDestination = NO;
-		for (i = 0; i < [missionDestinations count]; i++)
-		{
-			pnum = [missionDestinations oo_intAtIndex:i];
-			if (pnum == dest)
-			{
-				removeDestination = YES;
-				break;
-			}
-		}
-		
-		if (removeDestination == YES)
-		{
-			[missionDestinations removeObjectAtIndex:i];
-		}
+
+		[self removeMissionDestinationMarker:[self defaultMarker:dest]];
 	}
 }
 
@@ -2361,7 +2333,16 @@ static int scriptRandomSeed = -1;	// ensure proper random function
 		[gui setSelectableRange:NSMakeRange(0,0)];
 		
 		[gui setForegroundTextureDescriptor:[self missionOverlayDescriptorOrDefault]];
-		[gui setBackgroundTextureDescriptor:[self missionBackgroundDescriptorOrDefault]];
+		NSDictionary *background_desc = [self missionBackgroundDescriptorOrDefault];
+		NSNumber *background_spec = [background_desc objectForKey:@"special"];
+		if (background_spec != nil)
+		{
+			[gui setBackgroundTextureSpecial:(OOGUIBackgroundSpecial)[background_spec intValue]];
+		}
+		else
+		{
+			[gui setBackgroundTextureDescriptor:background_desc];
+		}
 		
 		[gui setShowTextCursor:NO];
 	}
@@ -2381,7 +2362,7 @@ static int scriptRandomSeed = -1;	// ensure proper random function
 	[[OOMusicController sharedController] playMissionMusic];
 	
 	// the following are necessary...
-	[UNIVERSE setViewDirection:VIEW_GUI_DISPLAY];
+	[UNIVERSE enterGUIViewModeWithMouseInteraction:NO];
 	_missionWithCallback = callback;
 }
 
@@ -2696,7 +2677,7 @@ static int scriptRandomSeed = -1;	// ensure proper random function
 	
 	[eqScripts addObject:[NSArray arrayWithObjects:eq_key,s,nil]];
 	if (primedEquipment == [eqScripts count] - 1) primedEquipment++;	// if primed-none, keep it as primed-none.
-	OOLog(@"player.equipmentScript", @"Scriptable equipment available: %u.",[eqScripts count]);
+	OOLog(@"player.equipmentScript", @"Scriptable equipment available: %lu.", [eqScripts count]);
 	return YES;
 }
 
@@ -2746,15 +2727,12 @@ static int scriptRandomSeed = -1;	// ensure proper random function
 - (void) targetNearestHostile
 {
 	[self scanForHostiles];
-	if (found_target != NO_TARGET)
+	Entity *ent = [self foundTarget];
+	if (ent != nil)
 	{
-		Entity *ent = [UNIVERSE entityForUniversalID:found_target];
-		if (ent != 0x00)
-		{
-			ident_engaged = YES;
-			missile_status = MISSILE_STATUS_TARGET_LOCKED;
-			[self addTarget:ent];
-		}
+		ident_engaged = YES;
+		missile_status = MISSILE_STATUS_TARGET_LOCKED;
+		[self addTarget:ent];
 	}
 }
 
@@ -2762,7 +2740,7 @@ static int scriptRandomSeed = -1;	// ensure proper random function
 - (void) targetNearestIncomingMissile
 {
 	[self scanForNearestIncomingMissile];
-	Entity *ent = [UNIVERSE entityForUniversalID:found_target];
+	Entity *ent = [self foundTarget];
 	if (ent != nil)
 	{
 		ident_engaged = YES;

@@ -11,9 +11,17 @@
 #endif
 
 
-// Clang feature testing extension.
+// Clang feature testing extensions.
 #ifndef __has_feature
 	#define __has_feature(x) (0)
+#endif
+
+#ifndef __has_attribute
+	#define __has_attribute(x) (0)
+#endif
+
+#ifndef __has_extension
+	#define __has_extension(x) (0)
 #endif
 
 
@@ -38,6 +46,21 @@
 
 #define INLINE_PURE_FUNC	ALWAYS_INLINE_FUNC PURE_FUNC
 #define INLINE_CONST_FUNC	ALWAYS_INLINE_FUNC CONST_FUNC
+
+
+#if __has_extension(attribute_deprecated_with_message)
+#define DEPRECATED_MSG(msg)	__attribute__((deprecated(msg)))
+#else
+#define DEPRECATED_MSG(msg)	DEPRECATED_FUNC
+#endif
+
+
+#if __clang__
+#define DEPRECATED_METHOD(msg)	DEPRECATED_MSG(msg)
+#else
+// GCC doesn't support attributes on Objective-C methods.
+#define DEPRECATED_METHOD(msg)
+#endif
 
 
 #ifdef __GNUC__
@@ -73,6 +96,20 @@
 #endif
 
 
+/*
+	OO_TAKES_FORMAT_STRING(stringIndex, firstToCheck): marks a function that
+	applies [NSString stringWithFormat:]-type formatting to arguments.
+	
+	According to the fine manuals, mainline GCC supports basic checking of
+	NSString format strings since 4.6, but doesn't validate the arguments.
+*/
+#if __has_attribute(format) || (defined(OOLITE_GCC_VERSION) && OOLITE_GCC_VERSION >= 40600)
+	#define OO_TAKES_FORMAT_STRING(stringIndex, firstToCheck) __attribute__((format(NSString, stringIndex, firstToCheck)))
+#else
+	#define OO_TAKES_FORMAT_STRING(stringIndex, firstToCheck)
+#endif
+
+
 #if __OBJC__
 /*	OOConsumeReference()
 	Decrements the Clang Static Analyzer's notion of an object's reference
@@ -84,11 +121,17 @@
 	don't use it.
 	-- Ahruman 2011-01-28
 */
+#if NDEBUG
 OOINLINE id OOConsumeReference(id OO_NS_CONSUMED value) ALWAYS_INLINE_FUNC;
 OOINLINE id OOConsumeReference(id OO_NS_CONSUMED value)
 {
 	return value;
 }
+#else
+// Externed to work around analyzer being too "clever" and ignoring attributes
+// when it's inlined.
+id OOConsumeReference(id OO_NS_CONSUMED value);
+#endif
 #endif
 
 #endif	/* INCLUDED_OOFUNCTIONATTRIBUTES_h */

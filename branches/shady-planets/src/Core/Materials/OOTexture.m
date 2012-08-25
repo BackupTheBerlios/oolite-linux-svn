@@ -383,7 +383,7 @@ static NSString *sGlobalTraceContext = nil;
 {
 	if (trace && !_trace)
 	{
-		OOLog(@"texture.allocTrace.begin", @"Started tracing texture %p with retain count %u.", self, [self retainCount]);
+		OOLog(@"texture.allocTrace.begin", @"Started tracing texture %p with retain count %lu.", self, [self retainCount]);
 	}
 	_trace = trace;
 }
@@ -470,7 +470,7 @@ static NSString *sGlobalTraceContext = nil;
 	if (cacheKey == nil)  return;
 	
 	[sLiveTextureCache removeObjectForKey:cacheKey];
-	NSAssert([sRecentTextures objectForKey:cacheKey] != self, @"Texture retain count error."); //miscount in autorelease
+	NSAssert2([sRecentTextures objectForKey:cacheKey] != self, @"Texture retain count error for %@; cacheKey is %@.", self, cacheKey); //miscount in autorelease
 	// The following line is needed in order to avoid crashes when there's a 'texture retain count error'. Please do not delete. -- Kaks 20091221
 	[sRecentTextures removeObjectForKey:cacheKey]; // make sure there's no reference left inside sRecentTexture ( was a show stopper for 1.73)
 #endif
@@ -551,8 +551,8 @@ static NSString *sGlobalTraceContext = nil;
 {
 	if (_trace)
 	{
-		if (context)  OOLog(@"texture.allocTrace.retain", @"Texture %p retained (retain count -> %u) - %@.", self, [self retainCount] + 1, context);
-		else  OOLog(@"texture.allocTrace.retain", @"Texture %p retained.", self, [self retainCount] + 1);
+		if (context)  OOLog(@"texture.allocTrace.retain", @"Texture %p retained (retain count -> %lu) - %@.", self, [self retainCount] + 1, context);
+		else  OOLog(@"texture.allocTrace.retain", @"Texture %p retained  (retain count -> %lu).", self, [self retainCount] + 1);
 	}
 	
 	return [super retain];
@@ -563,8 +563,8 @@ static NSString *sGlobalTraceContext = nil;
 {
 	if (_trace)
 	{
-		if (context)  OOLog(@"texture.allocTrace.release", @"Texture %p released (retain count -> %u) - %@.", self, [self retainCount] - 1, context);
-		else  OOLog(@"texture.allocTrace.release", @"Texture %p released (retain count -> %u).", self, [self retainCount] - 1);
+		if (context)  OOLog(@"texture.allocTrace.release", @"Texture %p released (retain count -> %lu) - %@.", self, [self retainCount] - 1, context);
+		else  OOLog(@"texture.allocTrace.release", @"Texture %p released (retain count -> %lu).", self, [self retainCount] - 1);
 	}
 	
 	[super release];

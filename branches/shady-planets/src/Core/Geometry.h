@@ -31,8 +31,9 @@ MA 02110-1301, USA.
 
 @class ShipEntity, Octree;
 
-@interface Geometry : NSObject
+@interface Geometry: NSObject
 {
+@private
 	// a geometry essentially consists of a whole bunch of Triangles.
 	// Note: simply making these unsigned will break octree generation. If trying it, don't forget to flush the cache. -- Ahruman 20081101
 	OOInteger	n_triangles;			// how many triangles in the geometry
@@ -53,8 +54,7 @@ MA 02110-1301, USA.
 - (BOOL) testCornersWithinGeometry:(GLfloat) corner;
 - (GLfloat) findMaxDimensionFromOrigin;
 
-- (Octree*) findOctreeToDepth: (int) depth;
-- (id) octreeWithinRadius:(GLfloat) octreeRadius toDepth: (int) depth;
+- (Octree *) findOctreeToDepth:(int)depth;
 
 - (void) translate:(Vector) offset;
 - (void) scale:(GLfloat) scalar;

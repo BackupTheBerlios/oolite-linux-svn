@@ -59,7 +59,7 @@ static OOTexture *sFlashTexture = nil;
 {
 	if ((self = [self initWithPosition:pos size:size color:[OOColor whiteColor] duration:kExplosionFlashDuration]))
 	{
-		_growthRate = fmaxf(_growthRate, kMinExplosionGrowth);
+		_growthRate = fmax(_growthRate, kMinExplosionGrowth);
 		[self setVelocity:vel];
 	}
 	return self;
@@ -76,13 +76,13 @@ static OOTexture *sFlashTexture = nil;
 }
 
 
-+ (id) explosionFlashFromEntity:(Entity *)entity
++ (instancetype) explosionFlashFromEntity:(Entity *)entity
 {
 	return [[[self alloc] initExplosionFlashWithPosition:[entity position] velocity:[entity velocity] size:[entity collisionRadius]] autorelease];
 }
 
 
-+ (id) laserFlashWithPosition:(Vector)pos velocity:(Vector)vel color:(OOColor *)color
++ (instancetype) laserFlashWithPosition:(Vector)pos velocity:(Vector)vel color:(OOColor *)color
 {
 	return [[[self alloc] initLaserFlashWithPosition:pos velocity:vel color:color] autorelease];
 }

@@ -79,6 +79,7 @@ static NSString * const	kWeightsKey = @"weights";
 
 @interface OOSingleObjectProbabilitySet: OOProbabilitySet
 {
+@private
 	id					_object;
 	float				_weight;
 }
@@ -90,6 +91,7 @@ static NSString * const	kWeightsKey = @"weights";
 
 @interface OOConcreteProbabilitySet: OOProbabilitySet <OOProbabilitySetEnumerable>
 {
+@private
 	OOUInteger			_count;
 	id					*_objects;
 	float				*_cumulativeWeights;	// Each cumulative weight is weight of object at this index + weight of all objects to left.
@@ -100,6 +102,7 @@ static NSString * const	kWeightsKey = @"weights";
 
 @interface OOConcreteMutableProbabilitySet: OOMutableProbabilitySet
 {
+@private
 	NSMutableArray		*_objects;
 	NSMutableArray		*_weights;
 	float				_sumOfWeights;
@@ -112,6 +115,7 @@ static NSString * const	kWeightsKey = @"weights";
 
 @interface OOProbabilitySetEnumerator: NSEnumerator
 {
+@private
 	id					_enumerable;
 	OOUInteger			_index;
 }
@@ -203,7 +207,7 @@ static void ThrowAbstractionViolationException(id obj)  GCC_ATTR((noreturn));
 		// Extract and convert weights.
 		for (i = 0; i < count; ++i)
 		{
-			rawWeights[i] = fmaxf([weights oo_floatAtIndex:i], 0.0f);
+			rawWeights[i] = fmax([weights oo_floatAtIndex:i], 0.0f);
 		}
 		
 		self = [self initWithObjects:rawObjects weights:rawWeights count:count];
@@ -438,7 +442,7 @@ static OOEmptyProbabilitySet *sOOEmptyProbabilitySetSingleton = nil;
 	if ((self = [super initPriv]))
 	{
 		_object = [object retain];
-		_weight = fmaxf(weight, 0.0f);
+		_weight = fmax(weight, 0.0f);
 	}
 	
 	return self;
@@ -805,7 +809,7 @@ static OOEmptyProbabilitySet *sOOEmptyProbabilitySetSingleton = nil;
 	{
 		for (i = 0; i != count; ++i)
 		{
-			[self setWeight:fmaxf(weights[i], 0.0f) forObject:objects[i]];
+			[self setWeight:fmax(weights[i], 0.0f) forObject:objects[i]];
 		}
 	}
 	
@@ -891,7 +895,7 @@ static OOEmptyProbabilitySet *sOOEmptyProbabilitySetSingleton = nil;
 		if (sum >= target)  return [_objects objectAtIndex:i];
 	}
 	
-	OOLog(@"probabilitySet.broken", @"%s fell off end, returning first object. Nominal sum = %f, target = %f, actual sum = %f, count = %u. %@", __PRETTY_FUNCTION__, sumOfWeights, target, sum, count,@"This is an internal error, please report it.");
+	OOLog(@"probabilitySet.broken", @"%s fell off end, returning first object. Nominal sum = %f, target = %f, actual sum = %f, count = %lu. %@", __PRETTY_FUNCTION__, sumOfWeights, target, sum, count,@"This is an internal error, please report it.");
 	return [_objects objectAtIndex:0];
 }
 
@@ -946,7 +950,7 @@ static OOEmptyProbabilitySet *sOOEmptyProbabilitySetSingleton = nil;
 {
 	if (object == nil)  return;
 	
-	weight = fmaxf(weight, 0.0f);
+	weight = fmax(weight, 0.0f);
 	OOUInteger index = [_objects indexOfObject:object];
 	if (index == NSNotFound)
 	{

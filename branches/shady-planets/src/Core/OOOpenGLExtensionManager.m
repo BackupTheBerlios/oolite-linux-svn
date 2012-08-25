@@ -166,7 +166,7 @@ static NSArray *ArrayOfExtensions(NSString *extensionString)
 	{
 #if OOOPENGLEXTMGR_LOCK_SET_ACCESS
 		lock = [[NSLock alloc] init];
-		[lock ooSetName:@"OOOpenGLExtensionManager extension set lock"];
+		[lock setName:@"OOOpenGLExtensionManager extension set lock"];
 #endif
 		
 		[self reset];
@@ -218,7 +218,7 @@ static NSArray *ArrayOfExtensions(NSString *extensionString)
 	[ResourceManager paths];
 	
 	OOLog(@"rendering.opengl.version", @"OpenGL renderer version: %u.%u.%u (\"%s\"). Vendor: \"%@\". Renderer: \"%@\".", major, minor, release, versionString, vendor, renderer);
-	OOLog(@"rendering.opengl.extensions", @"OpenGL extensions (%u):\n%@", [extensions count], [[extensions allObjects] componentsJoinedByString:@", "]);
+	OOLog(@"rendering.opengl.extensions", @"OpenGL extensions (%lu):\n%@", [extensions count], [[extensions allObjects] componentsJoinedByString:@", "]);
 	
 	if (![self versionIsAtLeastMajor:kMinMajorVersion minor:kMinMinorVersion])
 	{
@@ -298,7 +298,7 @@ static NSArray *ArrayOfExtensions(NSString *extensionString)
 }
 
 
-+ (id)sharedManager
++ (OOOpenGLExtensionManager *)sharedManager
 {
 	// NOTE: assumes single-threaded first access. See header.
 	if (sSingleton == nil)  sSingleton = [[self alloc] init];

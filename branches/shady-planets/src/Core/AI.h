@@ -32,13 +32,11 @@ MA 02110-1301, USA.
 
 
 @class ShipEntity;
-#ifdef OO_BRAIN_AI
-@class OOInstinct;
-#endif
 
 
-@interface AI : OOWeakRefObject
+@interface AI: OOWeakRefObject
 {
+@private
 	id					_owner;						// OOWeakReference to the ShipEntity this is the AI for
 	NSString			*ownerDesc;					// describes the object this is the AI for
 	
@@ -48,10 +46,6 @@ MA 02110-1301, USA.
 	NSMutableSet		*pendingMessages;
 	
 	NSMutableArray		*aiStack;
-	
-#ifdef OO_BRAIN_AI
-	OOInstinct			*rulingInstinct;
-#endif
 	
 	OOTimeAbsolute		nextThinkTime;
 	OOTimeDelta			thinkTimeInterval;
@@ -71,11 +65,6 @@ MA 02110-1301, USA.
 - (void) setState:(NSString *)stateName afterDelay:(NSTimeInterval)delay;
 
 - (id) initWithStateMachine:(NSString *) smName andState:(NSString *) stateName;
-
-#ifdef OO_BRAIN_AI
-- (OOInstinct *) rulingInstinct;
-- (void) setRulingInstinct:(OOInstinct*) instinct;
-#endif
 
 - (ShipEntity *)owner;
 - (void) setOwner:(ShipEntity *)ship;

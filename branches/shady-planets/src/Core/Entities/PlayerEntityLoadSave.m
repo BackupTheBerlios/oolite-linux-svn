@@ -45,30 +45,22 @@
 #import "OOJavaScriptEngine.h"
 
 
-// Set to 1 to use custom load/save dialogs in windowed mode on Macs in debug builds. No effect on other platforms.
-#define USE_CUSTOM_LOAD_SAVE_ON_MAC_DEBUG		0
-
-#if USE_CUSTOM_LOAD_SAVE_ON_MAC_DEBUG && OO_DEBUG && defined(OOLITE_USE_APPKIT_LOAD_SAVE)
-#undef OOLITE_USE_APPKIT_LOAD_SAVE
-#endif
-
-
 // Name of modifier key used to issue commands. See also -isCommandModifierKeyDown.
-#if OOLITE_MAC_OS_X
-#define COMMAND_MODIFIER_KEY		"Ctrl" // was "Command"
-#else
 #define COMMAND_MODIFIER_KEY		"Ctrl"
-#endif
 
 
 static uint16_t PersonalityForCommanderDict(NSDictionary *dict);
 
+
+#if OO_USE_CUSTOM_LOAD_SAVE
 
 @interface MyOpenGLView (OOLoadSaveExtensions)
 
 - (BOOL)isCommandModifierKeyDown;
 
 @end
+
+#endif
 
 
 @interface PlayerEntity (OOLoadSavePrivate)
@@ -80,15 +72,20 @@ static uint16_t PersonalityForCommanderDict(NSDictionary *dict);
 
 #endif
 
+#if OO_USE_CUSTOM_LOAD_SAVE
+
 - (void) setGuiToLoadCommanderScreen;
 - (void) setGuiToSaveCommanderScreen: (NSString *)cdrName;
 - (void) setGuiToOverwriteScreen: (NSString *)cdrName;
 - (void) lsCommanders: (GuiDisplayGen *)gui directory: (NSString*)directory pageNumber: (int)page highlightName: (NSString *)highlightName;
-- (void) writePlayerToPath:(NSString *)path;
-- (void) nativeSavePlayer: (NSString *)cdrName;
-- (BOOL) existingNativeSave: (NSString *)cdrName;
 - (void) showCommanderShip: (int)cdrArrayIndex;
 - (int) findIndexOfCommander: (NSString *)cdrName;
+- (void) nativeSavePlayer: (NSString *)cdrName;
+- (BOOL) existingNativeSave: (NSString *)cdrName;
+
+#endif
+
+- (void) writePlayerToPath:(NSString *)path;
 
 @end
 
@@ -99,7 +96,9 @@ static uint16_t PersonalityForCommanderDict(NSDictionary *dict);
 {
 	BOOL				OK = YES;
 	
-#if OOLITE_USE_APPKIT_LOAD_SAVE
+#if OO_USE_APPKIT_LOAD_SAVE_ALWAYS
+	OK = [self loadPlayerWithPanel];
+#elif OOLITE_USE_APPKIT_LOAD_SAVE
 	// OS X: use system open/save dialogs in windowed mode, custom interface in full-screen.
 	if ([[UNIVERSE gameController] inFullScreenMode])
 	{
@@ -119,11 +118,13 @@ static uint16_t PersonalityForCommanderDict(NSDictionary *dict);
 
 - (void)savePlayer
 {
-#if OOLITE_USE_APPKIT_LOAD_SAVE
+#if OO_USE_APPKIT_LOAD_SAVE_ALWAYS
+	[self savePlayerWithPanel];
+#elif OOLITE_USE_APPKIT_LOAD_SAVE
 	// OS X: use system open/save dialogs in windowed mode, custom interface in full-screen.
 	if ([[UNIVERSE gameController] inFullScreenMode])
 	{
-		[self setGuiToSaveCommanderScreen:player_name];
+		[self setGuiToSaveCommanderScreen:self.commanderName];
 	}
 	else
 	{
@@ -131,7 +132,7 @@ static uint16_t PersonalityForCommanderDict(NSDictionary *dict);
 	}
 #else
 	// Other platforms: use custom interface all the time.
-	[self setGuiToSaveCommanderScreen:player_name];
+	[self setGuiToSaveCommanderScreen:[self commanderName]];
 #endif
 }
 
@@ -141,18 +142,21 @@ static uint16_t PersonalityForCommanderDict(NSDictionary *dict);
 	NSString		*tmp_name = nil;
 	NSString		*dir = [[UNIVERSE gameController] playerFileDirectory];
 	
-	tmp_name = player_name;
+	tmp_name = [self commanderName];
 	tmp_path = save_path;
 	
 	ShipScriptEventNoCx(self, "playerWillSaveGame", OOJSSTR("AUTO_SAVE"));
 	
-	NSString *saveName = player_name;
-	if (![player_name hasSuffix:DESC(@"autosave-commander-suffix")])
-				saveName = [player_name stringByAppendingString:DESC(@"autosave-commander-suffix")];
+	NSString *saveName = [self commanderName];
+	NSString *autosaveSuffix = DESC(@"autosave-commander-suffix");
+	
+	if (![saveName hasSuffix:autosaveSuffix])
+	{
+		saveName = [saveName stringByAppendingString:autosaveSuffix];
+	}
 	NSString *savePath = [dir stringByAppendingPathComponent:[saveName stringByAppendingString:@".oolite-save"]];
 	
-	[player_name autorelease];
-	player_name = [saveName copy];
+	[self setCommanderName:saveName];
 	
 	NS_DURING
 		[self writePlayerToPath:savePath];
@@ -165,8 +169,7 @@ static uint16_t PersonalityForCommanderDict(NSDictionary *dict);
 		[save_path autorelease];
 		save_path = [tmp_path copy];
 	}
-	[player_name autorelease];
-	player_name = [tmp_name copy];
+	[self setCommanderName:tmp_name];
 }
 
 
@@ -191,6 +194,8 @@ static uint16_t PersonalityForCommanderDict(NSDictionary *dict);
 	[self setGuiToStatusScreen];
 }
 
+
+#if OO_USE_CUSTOM_LOAD_SAVE
 
 - (NSString *)commanderSelector
 {
@@ -416,6 +421,8 @@ static uint16_t PersonalityForCommanderDict(NSDictionary *dict);
 	}
 }
 
+#endif
+
 
 - (BOOL) loadPlayerFromFile:(NSString *)fileToOpen
 {
@@ -528,7 +535,7 @@ static uint16_t PersonalityForCommanderDict(NSDictionary *dict);
 	[UNIVERSE setAutoSaveNow:NO];
 	
 	[self setStatus:STATUS_DOCKED];
-	[UNIVERSE setViewDirection:VIEW_GUI_DISPLAY];
+	[UNIVERSE enterGUIViewModeWithMouseInteraction:NO];
 	
 	dockedStation = [UNIVERSE station];
 	if (dockedStation)
@@ -571,6 +578,54 @@ static uint16_t PersonalityForCommanderDict(NSDictionary *dict);
 
 #if OOLITE_USE_APPKIT_LOAD_SAVE
 
+#if OOLITE_MAC_OS_X_10_6
+
+- (BOOL)loadPlayerWithPanel
+{
+	NSOpenPanel *oPanel = [NSOpenPanel openPanel];
+	
+	oPanel.allowsMultipleSelection = NO;
+	oPanel.allowedFileTypes = [NSArray arrayWithObject:@"oolite-save"];
+	
+	if ([oPanel runModal] == NSOKButton)
+	{
+		NSURL *url = oPanel.URL;
+		if (url.isFileURL)
+		{
+			return [self loadPlayerFromFile:url.path];
+		}
+	}
+	
+	return NO;
+}
+
+
+- (void) savePlayerWithPanel
+{
+	NSSavePanel *sPanel = [NSSavePanel savePanel];
+	
+	sPanel.allowedFileTypes = [NSArray arrayWithObject:@"oolite-save"];
+	sPanel.canSelectHiddenExtension = YES;
+	sPanel.nameFieldStringValue = self.commanderName;
+	
+	if ([sPanel runModal] == NSOKButton)
+	{
+		NSURL *url = sPanel.URL;
+		NSAssert(url.isFileURL, @"Save panel with default configuration should not provide non-file URLs.");
+		
+		NSString *path = url.path;
+		NSString *newName = [path.lastPathComponent stringByDeletingPathExtension];
+		
+		ShipScriptEventNoCx(self, "playerWillSaveGame", OOJSSTR("STANDARD_SAVE"));
+		
+		self.commanderName = newName;
+		[self writePlayerToPath:path];
+	}
+	[self setGuiToStatusScreen];
+}
+
+#else
+
 - (BOOL)loadPlayerWithPanel
 {
 	int				result;
@@ -603,7 +658,7 @@ static uint16_t PersonalityForCommanderDict(NSDictionary *dict);
 	[sp setCanSelectHiddenExtension:YES];
 	
 	// display the NSSavePanel
-	runResult = [sp runModalForDirectory:nil file:player_name];
+	runResult = [sp runModalForDirectory:nil file:[self commanderName]];
 	
 	// if successful, save file under designated name
 	if (runResult == NSOKButton)
@@ -613,13 +668,14 @@ static uint16_t PersonalityForCommanderDict(NSDictionary *dict);
 		
 		ShipScriptEventNoCx(self, "playerWillSaveGame", OOJSSTR("STANDARD_SAVE"));
 		
-		[player_name release];
-		player_name = [new_name copy];
+		[self setCommanderName:new_name];
 		
 		[self writePlayerToPath:[sp filename]];
 	}
 	[self setGuiToStatusScreen];
 }
+
+#endif
 
 #endif
 
@@ -669,13 +725,13 @@ static uint16_t PersonalityForCommanderDict(NSDictionary *dict);
 	
 	ShipScriptEventNoCx(self, "playerWillSaveGame", OOJSSTR("STANDARD_SAVE"));
 	
-	[player_name release];
-	player_name = [cdrName copy];
+	[self setCommanderName:cdrName];
 	
 	[self writePlayerToPath:savePath];
 }
 
 
+#if OO_USE_CUSTOM_LOAD_SAVE
 
 - (void) setGuiToLoadCommanderScreen
 {
@@ -695,17 +751,16 @@ static uint16_t PersonalityForCommanderDict(NSDictionary *dict);
 	
 	[[UNIVERSE gameView] supressKeysUntilKeyUp];
 	
-	[self setShowDemoShips: YES];
-	[UNIVERSE setDisplayCursor: YES];
-	[UNIVERSE setViewDirection: VIEW_GUI_DISPLAY];
+	[self setShowDemoShips:YES];
+	[UNIVERSE enterGUIViewModeWithMouseInteraction:YES];
 }
 
 
-- (void) setGuiToSaveCommanderScreen: (NSString *)cdrName
+- (void) setGuiToSaveCommanderScreen:(NSString *)cdrName
 {
 	GuiDisplayGen *gui=[UNIVERSE gui];
-	MyOpenGLView*	gameView = [UNIVERSE gameView];
-	NSString*	dir = [[UNIVERSE gameController] playerFileDirectory];
+	MyOpenGLView *gameView = [UNIVERSE gameView];
+	NSString *dir = [[UNIVERSE gameController] playerFileDirectory];
 	
 	pollControls = NO;
 	gui_screen = GUI_SCREEN_SAVE;
@@ -724,16 +779,15 @@ static uint16_t PersonalityForCommanderDict(NSDictionary *dict);
 	[gui setForegroundTextureKey:@"docked_overlay"];
 	[gui setBackgroundTextureKey:@"load_save"];
 	
-	[gameView setTypedString: cdrName];
+	[gameView setTypedString:cdrName];
 	[gameView supressKeysUntilKeyUp];
 	
-	[self setShowDemoShips: YES];
-	[UNIVERSE setDisplayCursor: YES];
-	[UNIVERSE setViewDirection: VIEW_GUI_DISPLAY];
+	[self setShowDemoShips:YES];
+	[UNIVERSE enterGUIViewModeWithMouseInteraction:YES];
 }
 
 
-- (void) setGuiToOverwriteScreen: (NSString *)cdrName
+- (void) setGuiToOverwriteScreen:(NSString *)cdrName
 {
 	GuiDisplayGen *gui=[UNIVERSE gui];
 	MyOpenGLView*	gameView = [UNIVERSE gameView];
@@ -763,10 +817,9 @@ static uint16_t PersonalityForCommanderDict(NSDictionary *dict);
 	[gui setForegroundTextureKey:@"overwrite_overlay"];
 	[gui setBackgroundTextureKey:@"load_save"];
 	
-	[self setShowDemoShips: NO];
-	[UNIVERSE setDisplayCursor: NO];
-	[gameView setStringInput: gvStringInputNo];
-	[UNIVERSE setViewDirection: VIEW_GUI_DISPLAY];
+	[self setShowDemoShips:NO];
+	[gameView setStringInput:gvStringInputNo];
+	[UNIVERSE enterGUIViewModeWithMouseInteraction:NO];	// FIXME: should be YES, but was NO before introducing new mouse mode stuff. If set to YES, choices can be selected but not activated.
 }
 
 
@@ -904,8 +957,10 @@ static uint16_t PersonalityForCommanderDict(NSDictionary *dict);
 				[NSString stringWithFormat:@" %@ ",ratingDesc],
 				nil]
 				   forRow:row];
-			if ([player_name isEqualToString:[cdr oo_stringForKey:@"player_name"]])
+			if ([[self commanderName] isEqualToString:[cdr oo_stringForKey:@"player_name"]])
+			{
 				highlightRowOnPage = row;
+			}
 			
 			[gui setKey:GUI_KEY_OK forRow:row];
 			row++;
@@ -1082,22 +1137,23 @@ static uint16_t PersonalityForCommanderDict(NSDictionary *dict);
 	return -1;
 }
 
+#endif
+
 @end
 
+
+#if OO_USE_CUSTOM_LOAD_SAVE
 
 @implementation MyOpenGLView (OOLoadSaveExtensions)
 
 - (BOOL)isCommandModifierKeyDown
 {
-#if OOLITE_MAC_OS_X
-	//return [self isCommandDown];
 	return [self isCtrlDown];
-#else
-	return [self isCtrlDown];
-#endif
 }
 
 @end
+
+#endif
 
 
 static uint16_t PersonalityForCommanderDict(NSDictionary *dict)

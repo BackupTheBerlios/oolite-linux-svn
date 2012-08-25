@@ -108,24 +108,24 @@
 		089C1672FE841209C02AAC07 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = /System/Library/Frameworks/Foundation.framework; sourceTree = "<absolute>"; };
 		089C167FFE841241C02AAC07 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = /System/Library/Frameworks/AppKit.framework; sourceTree = "<absolute>"; };
 		1058C7ADFEA557BF11CA2CBB /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = /System/Library/Frameworks/Cocoa.framework; sourceTree = "<absolute>"; };
-		1A0255330C7E1BF000F622D4 /* debugLogMessageClassesMenu.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist; path = debugLogMessageClassesMenu.plist; sourceTree = "<group>"; };
+		1A0255330C7E1BF000F622D4 /* debugLogMessageClassesMenu.plist */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; path = debugLogMessageClassesMenu.plist; sourceTree = "<group>"; };
 		1A02553B0C7E1C3300F622D4 /* DebugOXPLocatorBeacon.magic */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = DebugOXPLocatorBeacon.magic; sourceTree = "<group>"; };
 		1A0256230C7F0D7100F622D4 /* OOJavaScriptConsoleController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OOJavaScriptConsoleController.h; sourceTree = "<group>"; };
 		1A0256240C7F0D7100F622D4 /* OOJavaScriptConsoleController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = OOJavaScriptConsoleController.m; sourceTree = "<group>"; };
 		1A02587A0C7F36CD00F622D4 /* OODebugUtilities.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OODebugUtilities.h; sourceTree = "<group>"; };
 		1A02587B0C7F36CD00F622D4 /* OODebugUtilities.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = OODebugUtilities.m; sourceTree = "<group>"; };
-		1A0518D10C7CC69600BA5CCA /* OODebugController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OODebugController.h; sourceTree = "<group>"; };
-		1A0518D20C7CC69600BA5CCA /* OODebugController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = OODebugController.m; sourceTree = "<group>"; };
+		1A0518D10C7CC69600BA5CCA /* OODebugController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = OODebugController.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		1A0518D20C7CC69600BA5CCA /* OODebugController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; lineEnding = 0; path = OODebugController.m; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objc; };
 		1A06F2711196E51A00AFA5B4 /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/OODebugSoundInspector.xib; sourceTree = "<group>"; };
-		1A06F2901196E69500AFA5B4 /* OODebugSoundInspector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OODebugSoundInspector.h; sourceTree = "<group>"; };
-		1A06F2911196E69500AFA5B4 /* OODebugSoundInspector.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = OODebugSoundInspector.m; sourceTree = "<group>"; };
-		1A0CF1AF0D89FD7700E0B568 /* OOAIDebugInspectorModule.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OOAIDebugInspectorModule.h; sourceTree = "<group>"; };
-		1A0CF1B00D89FD7700E0B568 /* OOAIDebugInspectorModule.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = OOAIDebugInspectorModule.m; sourceTree = "<group>"; };
+		1A06F2901196E69500AFA5B4 /* OODebugSoundInspector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = OODebugSoundInspector.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		1A06F2911196E69500AFA5B4 /* OODebugSoundInspector.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; lineEnding = 0; path = OODebugSoundInspector.m; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objc; };
+		1A0CF1AF0D89FD7700E0B568 /* OOAIDebugInspectorModule.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = OOAIDebugInspectorModule.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		1A0CF1B00D89FD7700E0B568 /* OOAIDebugInspectorModule.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; lineEnding = 0; path = OOAIDebugInspectorModule.m; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objc; };
 		1A0CF1B60D89FD9A00E0B568 /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/OOAIDebugInspectorModule.xib; sourceTree = "<group>"; };
 		1A22976414DE86C00024BED9 /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/OODebugController.xib; sourceTree = "<group>"; };
-		1A2DA4380CB788DB00DE6823 /* debugConfig.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist; path = debugConfig.plist; sourceTree = "<group>"; };
+		1A2DA4380CB788DB00DE6823 /* debugConfig.plist */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; path = debugConfig.plist; sourceTree = "<group>"; };
 		1A2DFAF40D8925CB0055CF71 /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/OOEntityDebugInspectorModule.xib; sourceTree = "<group>"; };
-		1A2DFAF80D8925F70055CF71 /* OODebugInspectorModule.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OODebugInspectorModule.h; sourceTree = "<group>"; };
+		1A2DFAF80D8925F70055CF71 /* OODebugInspectorModule.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = OODebugInspectorModule.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		1A2DFAF90D8925F70055CF71 /* OODebugInspectorModule.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = OODebugInspectorModule.m; sourceTree = "<group>"; };
 		1A2DFAFC0D89262E0055CF71 /* OOEntityDebugInspectorModule.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OOEntityDebugInspectorModule.h; sourceTree = "<group>"; };
 		1A2DFAFD0D89262E0055CF71 /* OOEntityDebugInspectorModule.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = OOEntityDebugInspectorModule.m; sourceTree = "<group>"; };
@@ -139,8 +139,8 @@
 		1A47F7010D6729F100E0A585 /* oolite-debug-console.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; path = "oolite-debug-console.js"; sourceTree = "<group>"; };
 		1A4D0DE30C90A68900A6FBDB /* OOMacDebugger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OOMacDebugger.h; sourceTree = "<group>"; };
 		1A4D0DE40C90A68900A6FBDB /* OOMacDebugger.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = OOMacDebugger.m; sourceTree = "<group>"; };
-		1A572FFB0D84BB77003D4A26 /* OODebugInspector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OODebugInspector.h; sourceTree = "<group>"; };
-		1A572FFC0D84BB77003D4A26 /* OODebugInspector.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = OODebugInspector.m; sourceTree = "<group>"; };
+		1A572FFB0D84BB77003D4A26 /* OODebugInspector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = OODebugInspector.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		1A572FFC0D84BB77003D4A26 /* OODebugInspector.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; lineEnding = 0; path = OODebugInspector.m; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objc; };
 		1A5730010D84BFBF003D4A26 /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/OODebugInspector.xib; sourceTree = "<group>"; };
 		1A57300C0D84C10F003D4A26 /* OOEntityInspectorExtensions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OOEntityInspectorExtensions.h; sourceTree = "<group>"; };
 		1A57300D0D84C10F003D4A26 /* OOEntityInspectorExtensions.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = OOEntityInspectorExtensions.m; sourceTree = "<group>"; };
@@ -348,7 +348,7 @@
 		089C1669FE841209C02AAC07 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0430;
+				LastUpgradeCheck = 0440;
 				ORGANIZATIONNAME = "the Oolite team";
 			};
 			buildConfigurationList = 1DEB913E08733D840010E9CD /* Build configuration list for PBXProject "DebugOXP" */;
@@ -536,6 +536,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = ../build/$CONFIGURATION/Oolite.app/Contents/MacOS/Oolite;
+				COMBINE_HIDPI_IMAGES = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -549,6 +550,7 @@
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS_NOT_USED_IN_PRECOMPS = $OOLITE_OPTION_MACROS;
 				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
+				IBC_WARNINGS = NO;
 				INFOPLIST_FILE = Resources/Info.plist;
 				INSTALL_PATH = "$(HOME)/Library/Bundles";
 				ONLY_ACTIVE_ARCH = YES;
@@ -556,12 +558,7 @@
 				PRODUCT_NAME = Debug;
 				SYMROOT = ../build;
 				USER_HEADER_SEARCH_PATHS = "../src/Core/** ../src/Cocoa $(SYMROOT)/$(CONFIGURATION)/include/js";
-				WARNING_CFLAGS = (
-					"-Wall",
-					"-Wextra",
-					"-Wno-unused-parameter",
-					"-Wno-missing-field-initializers",
-				);
+				WARNING_CFLAGS = $OO_WARNING_FLAGS;
 				WRAPPER_EXTENSION = oxp;
 			};
 			name = Debug;
@@ -570,6 +567,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = ../build/TestRelease/Oolite.app/Contents/MacOS/Oolite;
+				COMBINE_HIDPI_IMAGES = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -581,18 +579,14 @@
 				GCC_MODEL_TUNING = G5;
 				GCC_PREPROCESSOR_DEFINITIONS_NOT_USED_IN_PRECOMPS = $OOLITE_OPTION_MACROS;
 				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
+				IBC_WARNINGS = NO;
 				INFOPLIST_FILE = Resources/Info.plist;
 				INSTALL_PATH = "$(HOME)/Library/Bundles";
 				PRECOMPS_INCLUDE_HEADERS_FROM_BUILT_PRODUCTS_DIR = NO;
 				PRODUCT_NAME = Debug;
 				SYMROOT = ../build;
 				USER_HEADER_SEARCH_PATHS = "../src/Core/** ../src/Cocoa $(SYMROOT)/$(CONFIGURATION)/include/js";
-				WARNING_CFLAGS = (
-					"-Wall",
-					"-Wextra",
-					"-Wno-unused-parameter",
-					"-Wno-missing-field-initializers",
-				);
+				WARNING_CFLAGS = $OO_WARNING_FLAGS;
 				WRAPPER_EXTENSION = oxp;
 			};
 			name = TestRelease;

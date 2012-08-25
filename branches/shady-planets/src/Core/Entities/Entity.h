@@ -99,11 +99,13 @@ enum OOScanClass
 							collisionTestFilter: 1,
 							throw_sparks: 1,
 							isImmuneToBreakPatternHide: 1,
-							isExplicitlyNotMainStation: 1;
+							isExplicitlyNotMainStation: 1,
+							isVisualEffect: 1;
 	
 	OOScanClass				scanClass;
 	
 	GLfloat					zero_distance;
+	GLfloat					cam_zero_distance;
 	GLfloat					no_draw_distance;		// 10 km initially
 	GLfloat					collision_radius;
 	Vector					position;
@@ -157,6 +159,7 @@ enum OOScanClass
 - (OOUInteger) sessionID;
 
 - (BOOL) isShip;
+- (BOOL) isDock;
 - (BOOL) isStation;
 - (BOOL) isSubEntity;
 - (BOOL) isPlayer;
@@ -166,6 +169,7 @@ enum OOScanClass
 - (BOOL) isSky;
 - (BOOL) isWormhole;
 - (BOOL) isEffect;
+- (BOOL) isVisualEffect;
 
 - (BOOL) validForAddToUniverse;
 - (void) addToLinkedLists;
@@ -178,7 +182,7 @@ enum OOScanClass
 
 - (void) warnAboutHostiles;
 
-- (CollisionRegion*) collisionRegion;
+- (CollisionRegion *) collisionRegion;
 - (void) setCollisionRegion:(CollisionRegion*)region;
 
 - (void) setUniversalID:(OOUniversalID)uid;
@@ -189,9 +193,9 @@ enum OOScanClass
 - (void) throwSparks;
 
 - (void) setOwner:(Entity *)ent;
-- (id)owner;
-- (ShipEntity *)parentEntity;	// owner if self is subentity of owner, otherwise nil.
-- (ShipEntity *)rootShipEntity;	// like parentEntity, but recursive.
+- (id) owner;
+- (ShipEntity *) parentEntity;	// owner if self is subentity of owner, otherwise nil.
+- (ShipEntity *) rootShipEntity;	// like parentEntity, but recursive.
 
 - (void) setPosition:(Vector)posn;
 - (void) setPositionX:(GLfloat)x y:(GLfloat)y z:(GLfloat)z;
@@ -201,6 +205,7 @@ enum OOScanClass
 - (Vector) absolutePositionForSubentityOffset:(Vector) offset;
 
 - (double) zeroDistance;
+- (double) camZeroDistance;
 - (NSComparisonResult) compareZeroDistance:(Entity *)otherEntity;
 
 - (BoundingBox) boundingBox;
@@ -259,7 +264,7 @@ enum OOScanClass
 
 // Subclass repsonsibilities
 - (double) findCollisionRadius;
-- (Geometry*) geometry;
+- (Geometry *) geometry;
 - (void) drawEntity:(BOOL)immediate :(BOOL)translucent;
 - (BOOL) isVisible;
 

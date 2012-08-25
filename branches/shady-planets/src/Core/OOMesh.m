@@ -232,13 +232,13 @@ static BOOL IsPerVertexNormalMode(OOMeshNormalMode mode)
 
 @implementation OOMesh
 
-+ (id)meshWithName:(NSString *)name
-		  cacheKey:(NSString *)cacheKey
-materialDictionary:(NSDictionary *)materialDict
- shadersDictionary:(NSDictionary *)shadersDict
-			smooth:(BOOL)smooth
-	  shaderMacros:(NSDictionary *)macros
-shaderBindingTarget:(id<OOWeakReferenceSupport>)object
++ (instancetype) meshWithName:(NSString *)name
+					 cacheKey:(NSString *)cacheKey
+		   materialDictionary:(NSDictionary *)materialDict
+			shadersDictionary:(NSDictionary *)shadersDict
+					   smooth:(BOOL)smooth
+				 shaderMacros:(NSDictionary *)macros
+		  shaderBindingTarget:(id<OOWeakReferenceSupport>)object
 {
 	return [[[self alloc] initWithName:name
 							  cacheKey:cacheKey
@@ -329,7 +329,7 @@ static NSString *NormalModeDescription(OOMeshNormalMode mode)
 
 - (NSString *)descriptionComponents
 {
-	return [NSString stringWithFormat:@"\"%@\", %u vertices, %u faces, radius: %g m normals: %@", [self modelName], [self vertexCount], [self faceCount], [self collisionRadius], NormalModeDescription(_normalMode)];
+	return [NSString stringWithFormat:@"\"%@\", %zu vertices, %zu faces, radius: %g m normals: %@", [self modelName], [self vertexCount], [self faceCount], [self collisionRadius], NormalModeDescription(_normalMode)];
 }
 
 
@@ -416,7 +416,7 @@ static NSString *NormalModeDescription(OOMeshNormalMode mode)
 		/*	It should not be possible to have multiple texture units if
 			texture combiners are not available.
 		*/
-		NSAssert2([[OOOpenGLExtensionManager sharedManager] textureCombinersSupported], @"Mesh %@ uses %u texture units, but multitexturing is not available.", [self shortDescription], _textureUnitCount);
+		NSAssert2([[OOOpenGLExtensionManager sharedManager] textureCombinersSupported], @"Mesh %@ uses %lu texture units, but multitexturing is not available.", [self shortDescription], _textureUnitCount);
 		
 		for (unit = 0; unit < _textureUnitCount; unit++)
 		{
@@ -1335,11 +1335,11 @@ shaderBindingTarget:(id<OOWeakReferenceSupport>)target
 						if (n_v < 3)
 						{
 							failFlag = YES;
-							failString = [NSString stringWithFormat:@"%@Face[%u] has fewer than three vertices.\n", failString];
+							failString = [NSString stringWithFormat:@"%@Face[%u] has fewer than three vertices.\n", failString, j];
 						}
 						else if (n_v > 3)
 						{
-							OOLogWARN(@"mesh.load.warning.nonTriangular", @"Face[%u] of %@ has %u vertices specified. Only the first three will be used.", baseFile, n_v);
+							OOLogWARN(@"mesh.load.warning.nonTriangular", @"Face[%u] of %@ has %u vertices specified. Only the first three will be used.", j, baseFile, n_v);
 							n_v = 3;
 						}
 					}
@@ -1692,28 +1692,8 @@ static float FaceArea(GLuint *vertIndices, Vector *vertices)
 	float	a2 = distance2(vertices[vertIndices[0]], vertices[vertIndices[1]]);
 	float	b2 = distance2(vertices[vertIndices[1]], vertices[vertIndices[2]]);
 	float	c2 = distance2(vertices[vertIndices[2]], vertices[vertIndices[0]]);
-	return sqrtf((2.0 * (a2 * b2 + b2 * c2 + c2 * a2) - (a2 * a2 + b2 * b2 +c2 * c2)) * 0.0625);
+	return sqrt((2.0f * (a2 * b2 + b2 * c2 + c2 * a2) - (a2 * a2 + b2 * b2 +c2 * c2)) * 0.0625f);
 }
-
-
-#if 0
-static float FaceAreaBroken(GLuint *vertIndices, Vector *vertices)
-{
-	/*	This is supposed to calculate areas using Heron's formula, but doesn't.
-		(The *0.25 is supposed to be outside the sqrt.) This bug was introduced
-		somewhere between version 1.40 and 1.55, so we can't really fix it at
-		this point.
-		Current plan: replace DAT files with a better format post-MNSR. The
-		format converter will be responsible for any smoothing and can do it
-		right.
-		-- Ahruman 2010-05-22
-	*/
-	float	a2 = distance2(vertices[vertIndices[0]], vertices[vertIndices[1]]);
-	float	b2 = distance2(vertices[vertIndices[1]], vertices[vertIndices[2]]);
-	float	c2 = distance2(vertices[vertIndices[2]], vertices[vertIndices[0]]);
-	return sqrtf(2.0 * (a2 * b2 + b2 * c2 + c2 * a2) - 0.25 * (a2 * a2 + b2 * b2 +c2 * c2));
-}
-#endif
 
 
 - (void) calculateVertexNormalsAndTangentsWithFaceRefs:(VertexFaceRef *)faceRefs
@@ -1992,14 +1972,14 @@ static float FaceAreaCorrect(GLuint *vertIndices, Vector *vertices)
 	OOMeshVertexCount	i;
 	Vector				*vertex = NULL;
 	
-	for (i = 0; i != vertexCount; ++i)
+	for (i = 0; i < vertexCount; i++)
 	{
 		vertex = &_vertices[i];
 		*vertex = vector_multiply_scalar(*vertex, factor);
 	}
 	
 	// Rescale actual display vertices.
-	for (i = 0; i != _displayLists.count; i++)
+	for (i = 0; i < _displayLists.count; i++)
 	{
 		vertex = &_displayLists.vertexArray[i];
 		*vertex = vector_multiply_scalar(*vertex, factor);
@@ -2041,7 +2021,7 @@ static float FaceAreaCorrect(GLuint *vertIndices, Vector *vertices)
 		
 		// Draw normal
 		length = magnitude2(n);
-		blend = fabsf(length - 1) * 5.0;
+		blend = fabs(length - 1) * 5.0;
 		color[0] = MIN(blend, 1.0f);
 		color[1] = 1.0f - color[0];
 		color[2] = color[1];

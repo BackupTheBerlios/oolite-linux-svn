@@ -32,14 +32,10 @@ MA 02110-1301, USA.
 #import "OOTypes.h"
 #import "OOJSPropID.h"
 
-#if OOLITE_MAC_OS_X
-#import "Groolite.h"	// Needed for GROOLITE_VISIBLE.
-#endif
-
 
 @class GuiDisplayGen, OOTrumble, MyOpenGLView, HeadUpDisplay, ShipEntity;
 @class OOSound, OOSoundSource, OOSoundReferencePoint;
-@class OOJoystickManager, OOTexture, OOCamera;
+@class OOJoystickManager, OOTexture;
 
 
 #define SCRIPT_TIMER_INTERVAL			10.0
@@ -78,6 +74,14 @@ enum
 };
 
 
+// OO_RESOLUTION_OPTION: true if full screen resolution can be changed.
+#if OOLITE_MAC_OS_X && OOLITE_64_BIT
+#define OO_RESOLUTION_OPTION		0
+#else
+#define OO_RESOLUTION_OPTION		1
+#endif
+
+
 enum
 {
 	GUI_ROW_OPTIONS_QUICKSAVE,
@@ -96,7 +100,7 @@ enum
 	
 	STATUS_EQUIPMENT_FIRST_ROW 			= 10,
 	STATUS_EQUIPMENT_MAX_ROWS 			= 8,
-	
+
 	GUI_ROW_EQUIPMENT_START				= 3,
 	GUI_MAX_ROWS_EQUIPMENT				= 12,
 	GUI_ROW_EQUIPMENT_DETAIL			= GUI_ROW_EQUIPMENT_START + GUI_MAX_ROWS_EQUIPMENT + 1,
@@ -114,9 +118,6 @@ enum
 	GUI_ROW_GAMEOPTIONS_AUTOSAVE,
 	GUI_ROW_GAMEOPTIONS_SPACER1,
 	GUI_ROW_GAMEOPTIONS_VOLUME,
-#if OOLITE_MAC_OS_X && GROOLITE_VISIBLE
-	GUI_ROW_GAMEOPTIONS_GROWL,
-#endif
 #if OOLITE_SPEECH_SYNTH
 	GUI_ROW_GAMEOPTIONS_SPEECH,
 #if !OOLITE_MAC_OS_X
@@ -126,8 +127,10 @@ enum
 #endif
 #endif
 	GUI_ROW_GAMEOPTIONS_MUSIC,
+#if OO_RESOLUTION_OPTION
 	GUI_ROW_GAMEOPTIONS_SPACER2,
 	GUI_ROW_GAMEOPTIONS_DISPLAY,
+#endif
 	GUI_ROW_GAMEOPTIONS_DISPLAYSTYLE,
 	GUI_ROW_GAMEOPTIONS_DETAIL,
 	GUI_ROW_GAMEOPTIONS_WIREFRAMEGRAPHICS,
@@ -241,15 +244,18 @@ typedef enum
 
 #define PLAYER_DOCKING_AI_NAME			@"oolite-player-AI.plist"
 
+#define	MANIFEST_SCREEN_ROW_BACK 1
+#define	MANIFEST_SCREEN_ROW_NEXT [[PLAYER hud] isHidden]?27:20
+
+#define MISSION_DEST_LEGACY   @"__oolite_legacy_destinations"
 
 @interface PlayerEntity: ShipEntity
 {
-@public
+@private
 	Random_Seed				system_seed;
 	Random_Seed				target_system_seed;
 	float					occlusion_dial;
 	
-@private
 	Random_Seed				found_system_seed;
 	int						ship_trade_in_factor;
 	
@@ -283,7 +289,7 @@ typedef enum
 	
 	NSMutableDictionary		*shipyard_record;
 	
-	NSMutableArray			*missionDestinations;
+	NSMutableDictionary			*missionDestinations;
 
 	double					script_time;
 	double					script_time_check;
@@ -344,7 +350,7 @@ typedef enum
 	float					witchspaceCountdown;
 	
 	// player commander data
-	NSString				*player_name;
+	NSString				*_commanderName;
 	NSPoint					galaxy_coordinates;
 	
 	Random_Seed				galaxy_seed;
@@ -473,7 +479,6 @@ typedef enum
 	Vector					customViewOffset, customViewForwardVector, customViewUpVector, customViewRightVector;
 	NSString				*customViewDescription;
 	
-	OOViewID				currentWeaponFacing;	// decoupled from view direction
 	
 	// docking reports
 	NSMutableString			*dockingReport;
@@ -544,7 +549,7 @@ typedef enum
 	ShipEntity				*demoShip; // Used while docked to maintain demo ship rotation.
 }
 
-+ (PlayerEntity *)sharedPlayer;
++ (PlayerEntity *) sharedPlayer;
 - (void) deferredInit;
 
 - (BOOL) setUpAndConfirmOK:(BOOL)stopOnError;
@@ -552,7 +557,8 @@ typedef enum
 - (void) completeSetUp;
 - (void) completeSetUpAndSetTarget:(BOOL)setTarget;
 
-- (NSString *) captainName;
+- (NSString *) commanderName;
+- (void) setCommanderName:(NSString *)value;
 
 - (BOOL) isDocked;
 
@@ -584,9 +590,13 @@ typedef enum
 - (BOOL)setCommanderDataFromDictionary:(NSDictionary *) dict;
 
 - (void) doBookkeeping:(double) delta_t;
+- (BOOL) isValidTarget:(Entity*)target;
 
 - (BOOL) massLocked;
 - (BOOL) atHyperspeed;
+
+- (float) occlusionLevel;
+- (void) setOcclusionLevel:(float)level;
 
 - (void) setDockedAtMainStation;
 - (StationEntity *) dockedStation;
@@ -716,7 +726,7 @@ typedef enum
 - (NSArray *) cargoList;
 - (NSArray *) cargoListForScripting;
 - (void) setGuiToSystemDataScreen;
-- (NSArray *) markedDestinations;
+- (NSDictionary *) markedDestinations;
 - (void) setGuiToLongRangeChartScreen;
 - (void) setGuiToShortRangeChartScreen;
 - (void) setGuiToLoadSaveScreen;
@@ -794,13 +804,10 @@ typedef enum
 - (Vector)customViewUpVector;
 - (Vector)customViewRightVector;
 - (NSString *)customViewDescription;
+- (void)resetCustomView;
 - (void)setCustomViewDataFromDictionary:(NSDictionary*) viewDict;
 - (Vector) viewpointPosition;
 - (Vector) viewpointOffset;
-
-#if 0
-- (OOCamera *) currentCamera;
-#endif
 
 - (NSDictionary *) missionOverlayDescriptor;
 - (NSDictionary *) missionOverlayDescriptorOrDefault;
@@ -846,6 +853,12 @@ typedef enum
 - (WormholeEntity *) wormhole;
 - (void) setWormhole:(WormholeEntity *)newWormhole;
 - (void) addScannedWormhole:(WormholeEntity*)wormhole;
+
+- (void) initialiseMissionDestinations:(NSDictionary *)destinations andLegacy:(NSArray *)legacy;
+- (NSString *)markerKey:(NSDictionary*)marker;
+- (void) addMissionDestinationMarker:(NSDictionary *)marker;
+- (BOOL) removeMissionDestinationMarker:(NSDictionary *)marker;
+- (NSMutableDictionary*) getMissionDestinations;
 
 @end
 

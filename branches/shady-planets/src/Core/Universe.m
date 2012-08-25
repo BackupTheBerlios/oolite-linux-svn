@@ -59,9 +59,11 @@ MA 02110-1301, USA.
 #import "PlayerEntityContracts.h"
 #import "PlayerEntityScriptMethods.h"
 #import "StationEntity.h"
+#import "DockEntity.h"
 #import "SkyEntity.h"
 #import "DustEntity.h"
 #import "OOPlanetEntity.h"
+#import "OOVisualEffectEntity.h"
 #import "OOSunEntity.h"
 #import "WormholeEntity.h"
 #import "OOBreakPatternEntity.h"
@@ -78,6 +80,7 @@ MA 02110-1301, USA.
 #import "OOJSEngineTimeManagement.h"
 #import "OOJoystickManager.h"
 #import "OOScriptTimer.h"
+#import "OOJSScript.h"
 #import "OOJSFrameCallbacks.h"
 
 #if OO_LOCALIZATION_TOOLS
@@ -124,6 +127,7 @@ static OOComparisonResult comparePrice(id dict1, id dict2, void * context);
 
 @interface RouteElement: NSObject
 {
+@private
 	OOSystemID _location, _parent;
 	double _cost, _distance, _time;
 }
@@ -406,6 +410,7 @@ GLfloat docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEVEL, DOC
 	espeak_Cancel();
 #endif
 #endif
+	[conditionScripts release];
 	
 	[super dealloc];
 }
@@ -472,7 +477,7 @@ GLfloat docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEVEL, DOC
 	
 	if (!OOLogWillDisplayMessagesInClass(@"universe.objectDump"))  return;
 	
-	OOLog(@"universe.objectDump", @"DEBUG: Entity Dump - [entities count] = %d,\tn_entities = %d", [entities count], n_entities);
+	OOLog(@"universe.objectDump", @"DEBUG: Entity Dump - [entities count] = %lu,\tn_entities = %u", [entities count], n_entities);
 	
 	OOLogIndent();
 	for (i = 0; i < show_count; i++)
@@ -527,13 +532,7 @@ GLfloat docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEVEL, DOC
 		}
 	}
 	
-	[[gameView gameController] pauseGame];
-}
-
-
-- (BOOL) isGamePaused
-{
-	return [[gameView gameController] isGamePaused];
+	[[self gameController] setGamePaused:YES];
 }
 
 
@@ -579,6 +578,7 @@ GLfloat docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEVEL, DOC
 		}
 		// which will kick the ship out of the wormhole with the
 		// player still aboard
+		[wormhole disgorgeShips];
 
 		//reset atmospherics in case carrier was in atmosphere
 		[UNIVERSE setSkyColorRed:0.0f		// back to black
@@ -586,6 +586,7 @@ GLfloat docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEVEL, DOC
 												blue:0.0f
 											 alpha:0.0f];
 
+		[self setWitchspaceBreakPattern:YES];
 		[player doScriptEvent:OOJSID("shipWillExitWitchspace")];
 		[player doScriptEvent:OOJSID("shipExitedWitchspace")];
 		[player setWormhole:nil];
@@ -656,6 +657,7 @@ GLfloat docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEVEL, DOC
 					
 					[dockedStation setPosition: pos];
 				}
+				[self setWitchspaceBreakPattern:YES];
 				[player doScriptEvent:OOJSID("shipWillExitWitchspace")];
 				[player doScriptEvent:OOJSID("shipExitedWitchspace")];
 			}
@@ -742,10 +744,7 @@ GLfloat docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEVEL, DOC
 
 - (void) setUpWitchspace
 {
-	PlayerEntity*		player = PLAYER;
-	Random_Seed		s1 = player->system_seed;
-	Random_Seed		s2 = player->target_system_seed;
-	[self setUpWitchspaceBetweenSystem:s1 andSystem:s2];
+	[self setUpWitchspaceBetweenSystem:[PLAYER system_seed] andSystem:[PLAYER target_system_seed]];
 }
 
 
@@ -1155,7 +1154,7 @@ GLfloat docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEVEL, DOC
 		{
 			[nav_buoy setRoll:	0.10];
 			[nav_buoy setPitch:	0.15];
-			[nav_buoy setPosition:[a_station getBeaconPosition]];
+			[nav_buoy setPosition:[a_station beaconPosition]];
 			[nav_buoy setScanClass: CLASS_BUOY];
 			[self addEntity:nav_buoy];	// STATUS_IN_FLIGHT, AI state GLOBAL
 			[nav_buoy release];
@@ -1957,6 +1956,29 @@ GLfloat docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEVEL, DOC
 }
 
 
+- (OOVisualEffectEntity *) addVisualEffectAt:(Vector)pos withKey:(NSString *)key
+{
+	OOJS_PROFILE_ENTER
+	
+	// minimise the time between creating ship & assigning position.
+	
+	OOVisualEffectEntity  		*vis = [self newVisualEffectWithName:key]; // is retained
+	BOOL				success = NO;
+	if (vis != nil)
+	{
+		[vis setPosition:pos];
+		[vis setOrientation:OORandomQuaternion()];
+		
+		success = [self addEntity:vis]; // retained globally now
+		
+		[vis release];
+	}
+	return success ? vis : (OOVisualEffectEntity *)nil;
+	
+	OOJS_PROFILE_EXIT
+}
+
+
 - (ShipEntity *) addShipAt:(Vector)pos withRole:(NSString *)role withinRadius:(GLfloat)radius
 {
 	OOJS_PROFILE_ENTER
@@ -2181,10 +2203,47 @@ GLfloat docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEVEL, DOC
 }
 
 
+// used to avoid having lost escorts when player advances clock while docked
+- (void) forceWitchspaceEntries
+{
+	unsigned i;
+	for (i = 0; i < n_entities; i++)
+	{
+		if (sortedEntities[i]->isShip)
+		{
+			ShipEntity *my_ship = (ShipEntity*)sortedEntities[i];
+			Entity* my_target = [my_ship primaryTarget];
+			if ([my_target isWormhole])
+			{
+				[my_ship enterTargetWormhole];
+			}
+			else if ([[[my_ship getAI] state] isEqualToString:@"ENTER_WORMHOLE"])
+			{
+				[my_ship enterTargetWormhole];
+			}
+		}
+	}
+}
+
+
 - (void) addWitchspaceJumpEffectForShip:(ShipEntity *)ship
 {
 	[self addEntity:[OORingEffectEntity ringFromEntity:ship]];
 	[self addEntity:[OORingEffectEntity shrinkingRingFromEntity:ship]];
+}
+
+
+- (GLfloat) safeWitchspaceExitDistance
+{
+	for (unsigned i = 0; i < n_entities; i++)
+	{
+		Entity *e2 = sortedEntities[i];
+		if ([e2 isShip] && [(ShipEntity*)e2 hasPrimaryRole:@"buoy-witchpoint"])
+		{
+			return [(ShipEntity*)e2 collisionRadius] + MIN_DISTANCE_TO_BUOY;
+		}
+	}
+	return MIN_DISTANCE_TO_BUOY;
 }
 
 
@@ -2242,9 +2301,31 @@ GLfloat docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEVEL, DOC
 		[ring setVelocity:v];
 		[ring setLifetime:i*50.0];
 		[ring setScanClass: CLASS_NO_DRAW];
+		// FIXME: better would be to have break pattern timing not depend on
+		// these ring objects existing in the first place. - CIM
+		if (forDocking && ![[PLAYER dockedStation] hasBreakPattern])
+		{
+			ring->isImmuneToBreakPatternHide = NO;
+		}
+		else if (!forDocking && ![self witchspaceBreakPattern])
+		{
+			ring->isImmuneToBreakPatternHide = NO;
+		}
 		[self addEntity:ring];
 		breakPatternCounter++;
 	}
+}
+
+
+- (BOOL) witchspaceBreakPattern
+{
+	return _witchspaceBreakPattern;
+}
+
+
+- (void) setWitchspaceBreakPattern:(BOOL)newValue
+{
+	_witchspaceBreakPattern = !!newValue;
 }
 
 
@@ -2253,9 +2334,9 @@ GLfloat docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEVEL, DOC
 	// In unrestricted mode, reload last save game, if any. In strict mode, always restart as a fresh Jameson.
 	// NOTE: this is also called when loading a game fails, and when the js engine fails to reset properly.
 	
-	if (![self strict] && [[gameView gameController] playerFileToLoad])
+	if (![self strict] && [[self gameController] playerFileToLoad])
 	{
-		[[gameView gameController] loadPlayerIfRequired];
+		[[self gameController] loadPlayerIfRequired];
 	}
 	else
 	{
@@ -2322,7 +2403,7 @@ GLfloat docked_light_specular[4]	= { DOCKED_ILLUM_LEVEL, DOCKED_ILLUM_LEVEL, DOC
 		[gui setColor:[OOColor whiteColor] forRow:19];
 	}
 	
-	[self setViewDirection:VIEW_GUI_DISPLAY];
+	[self enterGUIViewModeWithMouseInteraction:NO];
 	if (!justCobra)
 	{
 		demo_stage = DEMO_SHOW_THING;
@@ -2543,8 +2624,42 @@ static BOOL IsFriendlyStationPredicate(Entity *entity, void *parameter)
 {
 	NSDictionary			*shipInfo = nil;
 	NSArray					*conditions = nil;
-	
+	NSString  *condition_script = nil;
 	shipInfo = [[OOShipRegistry sharedRegistry] shipInfoForKey:shipKey];
+
+	condition_script = [shipInfo oo_stringForKey:@"condition_script"];
+	if (condition_script != nil)
+	{
+		OOJSScript *condScript = [self getConditionScript:condition_script];
+		if (condScript != nil) // should always be non-nil, but just in case
+		{
+			JSContext			*context = OOJSAcquireContext();
+			BOOL OK;
+			JSBool allow_instantiation;
+			jsval result;
+			jsval args[] = { OOJSValueFromNativeObject(context, shipKey) };
+			
+			OOJSStartTimeLimiter();
+			OK = [condScript callMethod:OOJSID("allowSpawnShip")
+						  inContext:context
+					  withArguments:args count:sizeof args / sizeof *args
+							 result:&result];
+			OOJSStopTimeLimiter();
+
+			if (OK) OK = JS_ValueToBoolean(context, result, &allow_instantiation);
+			
+			OOJSRelinquishContext(context);
+
+			if (OK && !allow_instantiation)
+			{
+				/* if the script exists, the function exists, the function
+				 * returns a bool, and that bool is false, block
+				 * instantiation. Otherwise allow it as default */
+				return NO;
+			}
+		}
+	}
+
 	conditions = [shipInfo oo_arrayForKey:@"conditions"];
 	if (conditions == nil)  return YES;
 	
@@ -2651,6 +2766,36 @@ static BOOL IsFriendlyStationPredicate(Entity *entity, void *parameter)
 }
 
 
+- (OOVisualEffectEntity *) newVisualEffectWithName:(NSString *)effectKey
+{
+	OOJS_PROFILE_ENTER
+	
+	NSDictionary	*effectDict = nil;
+	OOVisualEffectEntity		*effect = nil;
+	
+	effectDict = [[OOShipRegistry sharedRegistry] effectInfoForKey:effectKey];
+	if (effectDict == nil)  return nil;
+	
+	NS_DURING
+		effect = [[OOVisualEffectEntity alloc] initWithKey:effectKey definition:effectDict];
+	NS_HANDLER
+		[effect release];
+		effect = nil;
+		
+		if ([[localException name] isEqual:OOLITE_EXCEPTION_DATA_NOT_FOUND])
+		{
+			OOLog(kOOLogException, @"***** Oolite Exception : '%@' in [Universe newVisualEffectWithName: %@ ] *****", [localException reason], effectKey);
+		}
+		else  [localException raise];
+	NS_ENDHANDLER
+	
+	// MKW 20090327 - retain count is actually 2!
+	return effect;   // retain count = 1
+	
+	OOJS_PROFILE_EXIT
+}
+
+
 - (ShipEntity *) newShipWithName:(NSString *)shipKey usePlayerProxy:(BOOL)usePlayerProxy
 {
 	OOJS_PROFILE_ENTER
@@ -2691,6 +2836,42 @@ static BOOL IsFriendlyStationPredicate(Entity *entity, void *parameter)
 }
 
 
+- (DockEntity *) newDockWithName:(NSString *)shipKey
+{
+	OOJS_PROFILE_ENTER
+	
+	NSDictionary	*shipDict = nil;
+	DockEntity		*ship = nil;
+	
+	shipDict = [[OOShipRegistry sharedRegistry] shipInfoForKey:shipKey];
+	if (shipDict == nil)  return nil;
+	
+	volatile Class shipClass = [DockEntity class];
+	
+	NS_DURING
+		ship = [[shipClass alloc] initWithKey:shipKey definition:shipDict];
+	NS_HANDLER
+		[ship release];
+		ship = nil;
+		
+		if ([[localException name] isEqual:OOLITE_EXCEPTION_DATA_NOT_FOUND])
+		{
+			OOLog(kOOLogException, @"***** Oolite Exception : '%@' in [Universe newDockWithName: %@ ] *****", [localException reason], shipKey);
+		}
+		else  [localException raise];
+	NS_ENDHANDLER
+	
+	// Set primary role to same as ship name, if ship name is also a role.
+	// Otherwise, if caller doesn't set a role, one will be selected randomly.
+	if ([ship hasRole:shipKey])  [ship setPrimaryRole:shipKey];
+	
+	// MKW 20090327 - retain count is actually 2!
+	return ship;   // retain count = 1
+	
+	OOJS_PROFILE_EXIT
+}
+
+
 - (ShipEntity *) newShipWithName:(NSString *)shipKey
 {
 	return [self newShipWithName:shipKey usePlayerProxy:NO];
@@ -2716,6 +2897,7 @@ static BOOL IsFriendlyStationPredicate(Entity *entity, void *parameter)
 	isStation = [dict oo_boolForKey:@"isCarrier" defaultValue:isStation];
 	isStation = [dict oo_boolForKey:@"is_carrier" defaultValue:isStation];
 	
+
 	return isStation ? [StationEntity class] : [ShipEntity class];
 	
 	OOJS_PROFILE_EXIT
@@ -3059,8 +3241,7 @@ static BOOL IsFriendlyStationPredicate(Entity *entity, void *parameter)
 - (void) setGameView:(MyOpenGLView *)view
 {
 	[gameView release];
-	gameView = view;
-	[gameView retain];
+	gameView = [view retain];
 }
 
 
@@ -3072,7 +3253,7 @@ static BOOL IsFriendlyStationPredicate(Entity *entity, void *parameter)
 
 - (GameController *) gameController
 {
-	return [gameView gameController];
+	return [[self gameView] gameController];
 }
 
 
@@ -3652,9 +3833,9 @@ static const OOMatrix	starboard_matrix =
 			
 			CheckOpenGLErrors(@"Universe after drawing entities");
 
-			GLfloat	line_width = [gameView viewSize].width / 1024.0; // restore line size
-			if (line_width < 1.0)  line_width = 1.0;
-			OOGL(glLineWidth(line_width));
+			GLfloat	lineWidth = [gameView viewSize].width / 1024.0; // restore line size
+			if (lineWidth < 1.0)  lineWidth = 1.0;
+			OOGL(glLineWidth(lineWidth));
 
 			[self drawMessage];
 			
@@ -3688,7 +3869,7 @@ static const OOMatrix	starboard_matrix =
 			
 			if (v_status != STATUS_DEAD && v_status != STATUS_ESCAPE_SEQUENCE)
 			{
-				[theHUD setLine_width:line_width];
+				[theHUD setLineWidth:lineWidth];
 				[theHUD renderHUD];
 			}
 			
@@ -3753,8 +3934,14 @@ static const OOMatrix	starboard_matrix =
 	float overallAlpha = [[PLAYER hud] overallAlpha];
 	if (displayGUI)
 	{
-		if (displayCursor)  cursor_row = [gui drawGUI:1.0 drawCursor:YES];
-		else  [gui drawGUI:1.0 drawCursor:NO];
+		if ([[self gameController] mouseInteractionMode] == MOUSE_MODE_UI_SCREEN_WITH_INTERACTION)
+		{
+			cursor_row = [gui drawGUI:1.0 drawCursor:YES];
+		}
+		else
+		{
+			[gui drawGUI:1.0 drawCursor:NO];
+		}
 	}
 	
 	[message_gui drawGUI:[message_gui alpha] * overallAlpha drawCursor:NO];
@@ -4838,6 +5025,34 @@ OOINLINE BOOL EntityInRange(Vector p1, Entity *e2, float range)
 }
 
 
+- (NSMutableArray *) findVisualEffectsMatchingPredicate:(EntityFilterPredicate)predicate
+									  parameter:(void *)parameter
+										inRange:(double)range
+									   ofEntity:(Entity *)entity
+{
+	if (predicate != NULL)
+	{
+		BinaryOperationPredicateParameter param =
+		{
+			IsVisualEffectPredicate, NULL,
+			predicate, parameter
+		};
+		
+		return [self findEntitiesMatchingPredicate:ANDPredicate
+										 parameter:&param
+										   inRange:range
+										  ofEntity:entity];
+	}
+	else
+	{
+		return [self findEntitiesMatchingPredicate:IsVisualEffectPredicate
+										 parameter:NULL
+										   inRange:range
+										  ofEntity:entity];
+	}
+}
+
+
 - (id) nearestEntityMatchingPredicate:(EntityFilterPredicate)predicate
 							parameter:(void *)parameter
 					 relativeToEntity:(Entity *)entity
@@ -4914,22 +5129,21 @@ OOINLINE BOOL EntityInRange(Vector p1, Entity *e2, float range)
 	[universeRegion clearEntityList];
 	
 	for (i = 0; i < n_entities; i++)
-		[universeRegion checkEntity: sortedEntities[i]];	//	sorts out which region it's in
+	{
+		[universeRegion checkEntity:sortedEntities[i]];	// sorts out which region it's in
+	}
 	
 	[universeRegion findCollisions];
 	
 	// do check for entities that can't see the sun!
 	[universeRegion findShadowedEntities];
-	
 }
 
 
 - (NSString*) collisionDescription
 {
-	if (universeRegion)
-		return	[NSString stringWithFormat:@"p%d - c%d", universeRegion->checks_this_tick, universeRegion->checks_within_range];
-	else
-		return	@"-";
+	if (universeRegion != nil)  return [universeRegion collisionDescription];
+	else  return @"-";
 }
 
 
@@ -4939,57 +5153,62 @@ OOINLINE BOOL EntityInRange(Vector p1, Entity *e2, float range)
 }
 
 
+- (OOViewID) viewDirection
+{
+	return viewDirection;
+}
+
+
 - (void) setViewDirection:(OOViewID) vd
 {
 	NSString		*ms = nil;
-	BOOL			mouseDelta = YES;
+	BOOL			guiSelected = NO;
 	
-	if ((viewDirection == vd)&&(vd != VIEW_CUSTOM)&&(!displayGUI))
+	if ((viewDirection == vd) && (vd != VIEW_CUSTOM) && (!displayGUI))
 		return;
 	
 	switch (vd)
 	{
 		case VIEW_FORWARD:
 			ms = DESC(@"forward-view-string");
-			displayGUI = NO;   // switch off any text displays
 			break;
 			
 		case VIEW_AFT:
 			ms = DESC(@"aft-view-string");
-			displayGUI = NO;   // switch off any text displays
 			break;
 			
 		case VIEW_PORT:
 			ms = DESC(@"port-view-string");
-			displayGUI = NO;   // switch off any text displays
 			break;
 			
 		case VIEW_STARBOARD:
 			ms = DESC(@"starboard-view-string");
-			displayGUI = NO;   // switch off any text displays
 			break;
 			
 		case VIEW_CUSTOM:
 			ms = [PLAYER customViewDescription];
-			displayGUI = NO;   // switch off any text displays
 			break;
 			
 		case VIEW_GUI_DISPLAY:
 			[self setDisplayText:YES];
 			[self setMainLightPosition:(Vector){ DEMO_LIGHT_POSITION }];
-			mouseDelta = NO;
-
+			guiSelected = YES;
 			break;
 			
 		default:
-			mouseDelta = NO;
+			guiSelected = YES;
 			break;
 	}
-#if OOLITE_SDL
-	[gameView setMouseInDeltaMode: mouseDelta];
-#else
-	(void)mouseDelta;
-#endif
+	
+	if (guiSelected)
+	{
+		[[self gameController] setMouseInteractionModeForUIWithMouseInteraction:NO];
+	}
+	else
+	{
+		displayGUI = NO;   // switch off any text displays
+		[[self gameController] setMouseInteractionModeForFlight];
+	}
 	
 	if (viewDirection != vd || viewDirection == VIEW_CUSTOM)
 	{
@@ -5004,9 +5223,10 @@ OOINLINE BOOL EntityInRange(Vector p1, Entity *e2, float range)
 }
 
 
-- (OOViewID) viewDirection
+- (void) enterGUIViewModeWithMouseInteraction:(BOOL)mouseInteraction
 {
-	return viewDirection;
+	[self setViewDirection:VIEW_GUI_DISPLAY];
+	[[self gameController] setMouseInteractionModeForUIWithMouseInteraction:mouseInteraction];
 }
 
 
@@ -5358,21 +5578,27 @@ OOINLINE BOOL EntityInRange(Vector p1, Entity *e2, float range)
 								{
 									[demo_ship switchAITo:@"nullAI.plist"];
 									[demo_ship setOrientation:q2];
-									[self addEntity:demo_ship];	// STATUS_IN_FLIGHT, AI state GLOBAL
-									[demo_ship release];		// We now own a reference through the entity list.
-									[demo_ship setStatus:STATUS_COCKPIT_DISPLAY];
-									demo_start_z=DEMO2_VANISHING_DISTANCE * demo_ship->collision_radius;
-									[demo_ship setPositionX:0.0f y:0.0f z:demo_start_z];
-									[demo_ship setDestination: make_vector(0.0f, 0.0f, demo_start_z * 0.01f)];	// ideal position
-									[demo_ship setVelocity:kZeroVector];
-									[demo_ship setScanClass: CLASS_NO_DRAW];
-									[demo_ship setRoll:M_PI/5.0];
-									[demo_ship setPitch:M_PI/10.0];
-									[gui setText:shipName != nil ? shipName : [demo_ship displayName] forRow:19 align:GUI_ALIGN_CENTER];
-									
-									demo_stage = DEMO_FLY_IN;
-									demo_start_time=universal_time;
-									demo_stage_time = demo_start_time + DEMO2_FLY_IN_STAGE_TIME;
+									if ([self addEntity:demo_ship])
+									{
+										[demo_ship release];		// We now own a reference through the entity list.
+										[demo_ship setStatus:STATUS_COCKPIT_DISPLAY];
+										demo_start_z=DEMO2_VANISHING_DISTANCE * demo_ship->collision_radius;
+										[demo_ship setPositionX:0.0f y:0.0f z:demo_start_z];
+										[demo_ship setDestination: make_vector(0.0f, 0.0f, demo_start_z * 0.01f)];	// ideal position
+										[demo_ship setVelocity:kZeroVector];
+										[demo_ship setScanClass: CLASS_NO_DRAW];
+										[demo_ship setRoll:M_PI/5.0];
+										[demo_ship setPitch:M_PI/10.0];
+										[gui setText:shipName != nil ? shipName : [demo_ship displayName] forRow:19 align:GUI_ALIGN_CENTER];
+										
+										demo_stage = DEMO_FLY_IN;
+										demo_start_time=universal_time;
+										demo_stage_time = demo_start_time + DEMO2_FLY_IN_STAGE_TIME;
+									}
+									else
+									{
+										demo_ship = nil;
+									}
 								}
 								break;
 						}
@@ -6887,7 +7113,7 @@ static NSDictionary	*sCachedSystemData = nil;
 		{		
 			if (distance < 0)
 			{
-				OOLogWARN(@"universe.findsystems", @"DEBUG: Universe neighboursToRandomSeed: found a system (%d) a negative distance (%d) away from %d", distance, seed, systems[i]);
+				OOLogWARN(@"universe.findsystems", @"DEBUG: Universe neighboursToRandomSeed: found a system pair with a negative distance (%f).", distance);
 				//i guess its still in range, but skip as it makes no sense
 				continue;
 			}
@@ -6969,10 +7195,17 @@ static NSDictionary	*sCachedSystemData = nil;
 	The preloading materials list is pruned before preloading, and also once
 	per frame so textures can fall out of the regular cache.
 	-- Ahruman 2009-12-19
+	
+	DISABLED due to crashes on some Windows systems. Textures generated here
+	remain in the sRecentTextures cache when released, suggesting a retain
+	imbalance somewhere. Cannot reproduce under Mac OS X. Needs further
+	analysis before reenabling.
+	http://www.aegidian.org/bb/viewtopic.php?f=3&t=12109
+	-- Ahruman 2012-06-29
 */
 - (void) preloadPlanetTexturesForSystem:(Random_Seed)seed
 {
-#if NEW_PLANETS
+#if 0 // NEW_PLANETS
 	[self prunePreloadingPlanetMaterials];
 	
 	if ([_preloadingPlanetMaterials count] < 3)
@@ -7589,6 +7822,39 @@ static double estimatedTimeForJourney(double distance, int hops)
 			{
 				[keysForShips removeObjectAtIndex:si--];
 			}
+			NSString *condition_script = [dict oo_stringForKey:@"condition_script"];
+			if (condition_script != nil)
+			{
+				OOJSScript *condScript = [self getConditionScript:condition_script];
+				if (condScript != nil) // should always be non-nil, but just in case
+				{
+					JSContext			*context = OOJSAcquireContext();
+					BOOL OK;
+					JSBool allow_purchase;
+					jsval result;
+					jsval args[] = { OOJSValueFromNativeObject(context, key) };
+			
+					OOJSStartTimeLimiter();
+					OK = [condScript callMethod:OOJSID("allowOfferShip")
+												inContext:context
+										withArguments:args count:sizeof args / sizeof *args
+													 result:&result];
+					OOJSStopTimeLimiter();
+
+					if (OK) OK = JS_ValueToBoolean(context, result, &allow_purchase);
+			
+					OOJSRelinquishContext(context);
+
+					if (OK && !allow_purchase)
+					{
+						/* if the script exists, the function exists, the function
+						 * returns a bool, and that bool is false, block
+						 * purchase. Otherwise allow it as default */
+						[keysForShips removeObjectAtIndex:si--];
+					}
+				}
+			}
+
 		}
 		
 		NSDictionary	*systemInfo = [self generateSystemData:system_seed];
@@ -7608,7 +7874,7 @@ static double estimatedTimeForJourney(double distance, int hops)
 		NSDictionary	*ship_info = [registry shipyardInfoForKey:ship_key];
 		OOTechLevelID	ship_techlevel = [ship_info oo_intForKey:KEY_TECHLEVEL];
 		
-		double chance = 1.0 - pow(1.0 - [ship_info oo_doubleForKey:KEY_CHANCE], fmaxf(1, techlevel - ship_techlevel));
+		double chance = 1.0 - pow(1.0 - [ship_info oo_doubleForKey:KEY_CHANCE], MAX((OOTechLevelID)1, techlevel - ship_techlevel));
 		
 		// seed random number generator
 		int super_rand1 = ship_seed.a * 0x10000 + ship_seed.c * 0x100 + ship_seed.e;
@@ -8405,24 +8671,6 @@ static OOComparisonResult comparePrice(id dict1, id dict2, void * context)
 }
 
 
-- (void) setDisplayCursor:(BOOL) value
-{
-	displayCursor = !!value;
-	
-#ifdef GNUSTEP
-	
-	[gameView autoShowMouse];
-	
-#endif
-}
-
-
-- (BOOL) displayCursor
-{
-	return displayCursor;
-}
-
-
 - (void) setDisplayText:(BOOL) value
 {
 	displayGUI = !!value;
@@ -8553,7 +8801,7 @@ static OOComparisonResult comparePrice(id dict1, id dict2, void * context)
 			OOLog(kOOLogException, @"***** Handling Fatal : %@ : %@ *****",[exception name], [exception reason]);
 			NSString* exception_msg = [NSString stringWithFormat:@"Exception : %@ : %@ Please take a screenshot and/or press esc or Q to quit.", [exception name], [exception reason]];
 			[self addMessage:exception_msg forCount:30.0];
-			[[self gameController] pauseGame];
+			[[self gameController] setGamePaused:YES];
 		}
 		else
 		{
@@ -8748,7 +8996,7 @@ Entity *gOOJSPlayerIfStale = nil;
 	memset(entity_for_uid, 0, sizeof entity_for_uid);
 	
 	[self setMainLightPosition:kZeroVector];
-	
+
 	[gui autorelease];
 	gui = [[GuiDisplayGen alloc] init];
 	
@@ -8818,7 +9066,7 @@ Entity *gOOJSPlayerIfStale = nil;
 	[equipmentData autorelease];
 	equipmentData = [[ResourceManager arrayFromFilesNamed:@"equipment.plist" inFolder:@"Config" andMerge:YES] retain];
 	if (strict)  [self filterOutNonStrictEquipment];
-	
+
 	[OOEquipmentType loadEquipment];
 }
 
@@ -8902,7 +9150,8 @@ Entity *gOOJSPlayerIfStale = nil;
 	//       be aware of cache flushes so it can automatically
 	//       reinitialize itself - mwerle 20081107.
 	[OOShipRegistry reload];
-	[[gameView gameController] unpauseGame];
+	[[self gameController] setGamePaused:NO];
+	[[self gameController] setMouseInteractionModeForUIWithMouseInteraction:NO];
 	[PLAYER setSpeed:0.0];
 	
 	if (strictChanged)
@@ -8939,7 +9188,7 @@ Entity *gOOJSPlayerIfStale = nil;
 	
 	[self addEntity:player];
 	demo_ship = nil;
-	[[gameView gameController] setPlayerFileToLoad:nil];		// reset Quicksave
+	[[self gameController] setPlayerFileToLoad:nil];		// reset Quicksave
 	
 	[self setUpInitialUniverse];
 	autoSaveNow = NO;	// don't autosave immediately after restarting a game
@@ -8993,7 +9242,7 @@ Entity *gOOJSPlayerIfStale = nil;
 	system_seed = [self findSystemAtCoords:[player galaxy_coordinates] withGalaxySeed:galaxy_seed];
 	OO_DEBUG_POP_PROGRESS();
 	
-	OO_DEBUG_PUSH_PROGRESS(@"Player init: setUpShipFromDictionary", __PRETTY_FUNCTION__);
+	OO_DEBUG_PUSH_PROGRESS(@"Player init: setUpShipFromDictionary");
 	[player setUpShipFromDictionary:[[OOShipRegistry sharedRegistry] shipInfoForKey:[player shipDataKey]]];	// the standard cobra at this point
 	[player baseMass]; // bootstrap the base mass used in all fuel charge calculations.
 	OO_DEBUG_POP_PROGRESS();
@@ -9001,7 +9250,7 @@ Entity *gOOJSPlayerIfStale = nil;
 	// Player init above finishes initialising all standard player ship properties. Now that the base mass is set, we can run setUpSpace! 
 	[self setUpSpace];
 
-	[self setViewDirection:VIEW_GUI_DISPLAY];
+	[self enterGUIViewModeWithMouseInteraction:NO];
 	[player setPosition:[[self station] position]];
 	[player setOrientation:kIdentityQuaternion];
 }
@@ -9121,10 +9370,29 @@ Entity *gOOJSPlayerIfStale = nil;
 			while ((unsigned)index < n_entities)
 			{
 				while (((unsigned)index + n < n_entities)&&(sortedEntities[index + n] == entity))
+				{
 					n++;	// ie there's a duplicate entry for this entity
+				}
+				
+				/*
+					BUG: when n_entities == UNIVERSE_MAX_ENTITIES, this read
+					off the end of the array and copied (Entity *)n_entities =
+					0x800 into the list. The subsequent update of zero_index
+					derferenced 0x800 and crashed.
+					FIX: add an extra unused slot to sortedEntities, which is
+					always nil.
+					EFFICIENCY CONCERNS: this could have been an alignment
+					issue since UNIVERSE_MAX_ENTITIES == 2048, but it isn't
+					really. sortedEntities is part of the object, not malloced,
+					it isn't aligned, and the end of it is only live in
+					degenerate cases.
+					-- Ahruman 2012-07-11
+				*/
 				sortedEntities[index] = sortedEntities[index + n];	// copy entity[index + n] -> entity[index] (preserves sort order)
 				if (sortedEntities[index])
+				{
 					sortedEntities[index]->zero_index = index;				// give it its correct position
+				}
 				index++;
 			}
 			if (n > 1)
@@ -9241,7 +9509,7 @@ static void PreloadOneSound(NSString *soundName)
 {
 	unsigned			i, r, escortsWeight;
 	unsigned			totalRocks = 0;
-	BOOL				includeHermit;
+	BOOL				includeHermit, includedHermit = NO;
 	unsigned			clusterSize;
 	double				asteroidLocation;
 	Vector				launchPos;
@@ -9502,6 +9770,8 @@ static void PreloadOneSound(NSString *soundName)
 		launchPos = OOVectorTowards(h1_pos, v_route1, asteroidLocation);
 		includeHermit = (Ranrot() & 31) <= clusterSize && r < total_clicks * 2 / 3 && !sunGoneNova;
 		
+		includedHermit |= includeHermit;
+
 		totalRocks += [self scatterAsteroidsAt:launchPos
 								  withVelocity:kZeroVector
 						   includingRockHermit:includeHermit
@@ -9666,6 +9936,8 @@ static void PreloadOneSound(NSString *soundName)
 		launchPos = OOVectorTowards(p1_pos, v_route2, asteroidLocation);
 		includeHermit = (Ranrot() & 31) <= clusterSize && asteroidLocation > 0.33 * maxLength && !sunGoneNova;
 		
+		includedHermit |= includeHermit;
+
 		totalRocks += [self scatterAsteroidsAt:launchPos
 								  withVelocity:kZeroVector
 						   includingRockHermit:includeHermit
@@ -9674,7 +9946,28 @@ static void PreloadOneSound(NSString *soundName)
 			];
 		[pool release];
 	}
+
 	
+	if (!sunGoneNova && !includedHermit)
+	{
+		// if we haven't had a non-main station yet
+		// add a loose rock hermit for full pirates to dock with well out of the way
+		Vector  v_route1_mid = vector_multiply_scalar(v_route1,0.5);
+		Vector  v_off_plane = cross_product(v_route1,v_route2);
+		// make sure it is well out of sun/planet/wp plane to make sure
+		// player doesn't run across it accidentally
+		Vector  v_hermit_area = vector_add(v_route1_mid,vector_multiply_scalar(v_off_plane,500000.0));
+		// if they manage to follow a pirate out there, fair enough.
+		// there are quicker ways to make money
+		Vector  v_hermit_pos = vector_add(v_hermit_area,OOVectorRandomSpatial(200000.0));
+		
+		[self scatterAsteroidsAt:v_hermit_pos
+								withVelocity:kZeroVector
+				 includingRockHermit:YES
+									 asCinders:NO
+								 clusterSize:1 + (Ranrot() % 6)];
+	}
+
 }
 
 - (int) scatterAsteroidsAt:(Vector)spawnPos withVelocity:(Vector)spawnVel includingRockHermit:(BOOL)spawnHermit asCinders:(BOOL)asCinders
@@ -9968,6 +10261,41 @@ static void PreloadOneSound(NSString *soundName)
 	shaderEffectsLevel = value;
 }
 
+
+
+- (void) loadConditionScripts
+{
+	[conditionScripts autorelease];
+	conditionScripts = [[NSMutableDictionary alloc] init];
+	// get list of names from cache manager 
+	[self addConditionScripts:[[[OOCacheManager sharedCache] objectForKey:@"equipment conditions" inCache:@"condition scripts"] objectEnumerator]];
+	
+	[self addConditionScripts:[[[OOCacheManager sharedCache] objectForKey:@"ship conditions" inCache:@"condition scripts"] objectEnumerator]];
+}
+
+
+- (void) addConditionScripts:(NSEnumerator *)scripts
+{
+	NSString *scriptname = nil;
+	while ((scriptname = [scripts nextObject]))
+	{
+		if ([conditionScripts objectForKey:scriptname] == nil)
+		{
+			OOJSScript *script = [OOScript jsScriptFromFileNamed:scriptname properties:nil];
+			if (script != nil)
+			{
+				[conditionScripts setObject:script forKey:scriptname];
+			}
+		}
+	}
+}
+
+
+- (OOJSScript*) getConditionScript:(NSString *)scriptname
+{
+	return [conditionScripts objectForKey:scriptname];
+}
+
 @end
 
 
@@ -10127,5 +10455,5 @@ NSString *DESC_PLURAL_(NSString *key, int count)
 	}
 	
 passed:
-	return DESC_([NSString stringWithFormat:@"%@%%%d", key, index]);
+	return DESC_([NSString stringWithFormat:@"%@%%%ld", key, index]);
 }

@@ -32,12 +32,6 @@ MA 02110-1301, USA.
 
 @implementation PlayerEntity (ScriptMethods)
 
-- (NSString *) playerName
-{
-	return [[player_name retain] autorelease];
-}
-
-
 - (unsigned) score
 {
 	return ship_kills;
@@ -265,6 +259,56 @@ MA 02110-1301, USA.
 	a = (a << 16) | (b << 8) | c;
 	return (double)a / (double)0x01000000;
 	
+}
+
+- (NSDictionary *) passengerContractMarker:(OOSystemID)system
+{
+	return [[[NSDictionary dictionaryWithObjectsAndKeys:
+								[NSNumber numberWithInt:system], @"system",
+								MISSION_DEST_LEGACY, @"name",
+								@"orangeColor", @"markerColor",
+								@"MARKER_DIAMOND", @"markerShape",
+								nil] retain] autorelease];
+}
+
+- (NSDictionary *) cargoContractMarker:(OOSystemID)system
+{
+	return [[[NSDictionary dictionaryWithObjectsAndKeys:
+								[NSNumber numberWithInt:system], @"system",
+								MISSION_DEST_LEGACY, @"name",
+								@"orangeColor", @"markerColor",
+								@"MARKER_SQUARE", @"markerShape",
+								nil] retain] autorelease];
+}
+
+- (NSDictionary *) defaultMarker:(OOSystemID)system
+{
+	return [[[NSDictionary dictionaryWithObjectsAndKeys:
+								[NSNumber numberWithInt:system], @"system",
+								MISSION_DEST_LEGACY, @"name",
+								@"redColor", @"markerColor",
+								@"MARKER_X", @"markerShape",
+								nil] retain] autorelease];
+}
+
+- (NSDictionary *) validatedMarker:(NSDictionary *)marker
+{
+	OOSystemID dest = [marker oo_intForKey:@"system"];
+// FIXME: parameters
+	if (dest < 0 || dest > kOOMaximumSystemID)
+	{
+		return nil;
+	}
+	NSString *group = [marker oo_stringForKey:@"name" defaultValue:MISSION_DEST_LEGACY];
+
+	return [[[NSDictionary dictionaryWithObjectsAndKeys:
+								[NSNumber numberWithInt:dest], @"system",
+								group, @"name",
+								[marker oo_stringForKey:@"markerColor" defaultValue:@"redColor"], @"markerColor",
+								[marker oo_stringForKey:@"markerShape" defaultValue:@"MARKER_X"], @"markerShape",
+							  [NSNumber numberWithFloat:[marker oo_floatForKey:@"markerScale" defaultValue:1.0]], @"markerScale",
+								nil] retain] autorelease];
+
 }
 
 @end

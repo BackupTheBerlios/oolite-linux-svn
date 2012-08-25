@@ -30,6 +30,7 @@ SOFTWARE.
 #import "OOCASoundChannel.h"
 #import "NSThreadOOExtensions.h"
 #import "OOCASoundDebugMonitor.h"
+#import "OOErrorDescription.h"
 
 
 static NSString * const kOOLogSoundInspetorNotLoaded			= @"sound.mixer.inspector.loadFailed";
@@ -65,7 +66,7 @@ void OOSoundRegisterDebugMonitor(id <OOCASoundDebugMonitor> monitor)
 
 @implementation OOSoundMixer
 
-+ (id) sharedMixer
++ (OOSoundMixer *) sharedMixer
 {
 	if (nil == sSingleton)
 	{
@@ -89,7 +90,7 @@ void OOSoundRegisterDebugMonitor(id <OOCASoundDebugMonitor> monitor)
 	if (nil != self)
 	{
 		_listLock = [[NSLock alloc] init];
-		[_listLock ooSetName:@"OOSoundMixer list lock"];
+		[_listLock setName:@"OOSoundMixer list lock"];
 		OK = nil != _listLock;
 		
 		if (OK)
@@ -155,7 +156,7 @@ void OOSoundRegisterDebugMonitor(id <OOCASoundDebugMonitor> monitor)
 			if (!onlyOnce)
 			{
 				onlyOnce = YES;
-				OOLog(@"sound.mixer.init.failed", @"Failed to initialize sound mixer - error %i ('%.4s')", err, &err);
+				OOLog(@"sound.mixer.init.failed", @"Failed to initialize sound mixer - error %@", AudioErrorNSString(err));
 			}
 			[super release];
 			self = nil;

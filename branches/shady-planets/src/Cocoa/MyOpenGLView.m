@@ -45,6 +45,11 @@ static NSString * kOOLogKeyUp				= @"input.keyMapping.keyPress.keyUp";
 static NSString * kOOLogKeyDown				= @"input.keyMapping.keyPress.keyDown";
 
 
+static void GetDesiredCursorState(OOMouseInteractionMode mode, BOOL *outHidden, BOOL *outObscured);
+static void ApplyCursorState(OOMouseInteractionMode mode);
+static void UnapplyCursorState(OOMouseInteractionMode mode);
+
+
 @interface MyOpenGLView(Internal)
 
 - (int) translateKeyCode:(int)input;
@@ -91,19 +96,11 @@ static NSString * kOOLogKeyDown				= @"input.keyMapping.keyPress.keyDown";
 	}
 #endif
 	
-	if (!(self = [super initWithFrame:frameRect]))  return nil;
-	
-	if ([self respondsToSelector:@selector(setWantsBestResolutionOpenGLSurface:)])
-	{
-		// Enable high resolution on Retina displays.
-		[self setWantsBestResolutionOpenGLSurface:YES];
-	}
-	
 	// Pixel Format Attributes for the View-based (non-FullScreen) NSOpenGLContext
 	NSOpenGLPixelFormatAttribute attrs[] =
 	{
 		// Specify that we want a windowed OpenGL context.
-		// Must be first or we'll hit an assert in -[GameController goFullscreen:].
+		// Must be first or we'll hit an assert in the legacy fullscreen controller.
 		NSOpenGLPFAWindow,
 		
 		// We may be on a multi-display system (and each screen may be driven by a different renderer), so we need to specify which screen we want to take over.
@@ -131,26 +128,33 @@ static NSString * kOOLogKeyDown				= @"input.keyMapping.keyPress.keyDown";
 		0
 	};
 	
-	_pixelFormatAttributes = [[NSData alloc] initWithBytes:attrs length:sizeof attrs];
-	
 	// Create our non-FullScreen pixel format.
 	NSOpenGLPixelFormat *pixelFormat = [[[NSOpenGLPixelFormat alloc] initWithAttributes:attrs] autorelease];
 	
-	self = [super initWithFrame:frameRect pixelFormat:pixelFormat];
-	
-	virtualJoystickPosition = NSMakePoint(0.0,0.0);
-	if ([self respondsToSelector:@selector(setAcceptsTouchEvents:)])
+	if ((self = [super initWithFrame:frameRect pixelFormat:pixelFormat]))
 	{
-		[self setAcceptsTouchEvents:YES];
-	}
-	
-	typedString = [[NSMutableString alloc] initWithString:@""];
-	allowingStringInput = gvStringInputNo;
-	isAlphabetKeyDown = NO;
+		if ([self respondsToSelector:@selector(setAcceptsTouchEvents:)])
+		{
+			[self setAcceptsTouchEvents:YES];
+		}
 		
-	timeIntervalAtLastClick = [NSDate timeIntervalSinceReferenceDate];
-	
-	_virtualScreen = [[self openGLContext] currentVirtualScreen];
+		if ([self respondsToSelector:@selector(setWantsBestResolutionOpenGLSurface:)])
+		{
+			// Enable high resolution on Retina displays.
+			[self setWantsBestResolutionOpenGLSurface:YES];
+		}
+		
+		_pixelFormatAttributes = [[NSData alloc] initWithBytes:attrs length:sizeof attrs];
+		virtualJoystickPosition = NSMakePoint(0.0,0.0);
+		
+		typedString = [[NSMutableString alloc] initWithString:@""];
+		allowingStringInput = gvStringInputNo;
+		isAlphabetKeyDown = NO;
+			
+		timeIntervalAtLastClick = [NSDate timeIntervalSinceReferenceDate];
+		
+		_virtualScreen = [[self openGLContext] currentVirtualScreen];
+	}
 	
 	return self;
 }
@@ -243,9 +247,19 @@ static NSString * kOOLogKeyDown				= @"input.keyMapping.keyPress.keyDown";
 }
 
 
+- (void) noteMouseInteractionModeChangedFrom:(OOMouseInteractionMode)oldMode to:(OOMouseInteractionMode)newMode
+{
+	UnapplyCursorState(oldMode);
+	ApplyCursorState(newMode);
+}
+
+
 - (void) updateScreen
 {
-	[self drawRect:NSMakeRect(0, 0, viewSize.width, viewSize.height)];
+	if ([[self window] isVisible])
+	{
+		[self drawRect:NSMakeRect(0, 0, viewSize.width, viewSize.height)];
+	}
 }
 
 
@@ -327,7 +341,7 @@ static NSString * kOOLogKeyDown				= @"input.keyMapping.keyPress.keyDown";
 		y_offset = 320.0 * viewSize.height/viewSize.width;
 	}
 	
-	if (![[self gameController] inFullScreenMode] && [self respondsToSelector:@selector(convertSizeToBacking:)])
+	if ([self respondsToSelector:@selector(convertSizeToBacking:)])
 	{
 		// High resolution mode support.
 		v_size = [self convertSizeToBacking:v_size];
@@ -581,16 +595,7 @@ FAIL:
 		if (!f12)
 		{
 			f12 = YES;
-			
-			if (![gameController inFullScreenMode])
-			{
-				// Command-F is handled by menu action in non-fullscreen mode; simulate.
-				[gameController performSelector:@selector(goFullscreen:) withObject:nil afterDelay:0.0];
-			}
-			else
-			{
-				commandF = YES;
-			}
+			[gameController performSelector:@selector(toggleFullScreenAction:) withObject:nil afterDelay:0.0];
 		}
 		
 		return;
@@ -1143,5 +1148,32 @@ FAIL:
 }
 
 #endif
+
+
+static void GetDesiredCursorState(OOMouseInteractionMode mode, BOOL *outHidden, BOOL *outObscured)
+{
+	NSCParameterAssert(outHidden != NULL && outObscured != NULL);
+	
+	*outHidden = (mode == MOUSE_MODE_FLIGHT_WITH_MOUSE_CONTROL);
+	*outObscured = (mode == MOUSE_MODE_FLIGHT_NO_MOUSE_CONTROL);
+}
+
+
+static void ApplyCursorState(OOMouseInteractionMode mode)
+{
+	BOOL hidden, obscured;
+	GetDesiredCursorState(mode, &hidden, &obscured);
+	if (hidden)  [NSCursor hide];
+	if (obscured)  [NSCursor setHiddenUntilMouseMoves:YES];
+}
+
+
+static void UnapplyCursorState(OOMouseInteractionMode mode)
+{
+	BOOL hidden, obscured;
+	GetDesiredCursorState(mode, &hidden, &obscured);
+	if (hidden)  [NSCursor unhide];
+	if (obscured)  [NSCursor setHiddenUntilMouseMoves:NO];
+}
 
 @end

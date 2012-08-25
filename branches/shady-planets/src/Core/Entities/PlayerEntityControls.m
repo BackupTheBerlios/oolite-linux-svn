@@ -55,12 +55,9 @@ MA 02110-1301, USA.
 #import "OOJSScript.h"
 #import "OOEquipmentType.h"
 
-#if OOLITE_MAC_OS_X
-#import "Groolite.h"
-#endif
-
 #import "OODebugSupport.h"
 #import "OODebugMonitor.h"
+
 
 static BOOL				jump_pressed;
 static BOOL				hyperspace_pressed;
@@ -96,7 +93,9 @@ static BOOL				m_key_pressed;
 static BOOL				pling_pressed;
 static BOOL				cursor_moving;
 static BOOL				disc_operation_in_progress;
+#if OO_RESOLUTION_OPTION
 static BOOL				switching_resolution;
+#endif
 static BOOL				wait_for_key_up;
 static BOOL				upDownKeyPressed;
 static BOOL				leftRightKeyPressed;
@@ -150,6 +149,10 @@ static NSTimeInterval	time_last_frame;
 - (void) switchToThisView:(OOViewID)viewDirection fromView:(OOViewID)oldViewDirection andProcessWeaponFacing:(BOOL)processWeaponFacing justNotify:(BOOL)justNotify;
 
 - (void) handleAutopilotOn:(BOOL)fastDocking;
+
+// Handlers for individual controls
+- (void) handleButtonIdent;
+- (void) handleButtonTargetMissile;
 
 @end
 
@@ -443,7 +446,7 @@ static NSTimeInterval	time_last_frame;
 		[UNIVERSE removeDemoShips];
 	}
 	[(MyOpenGLView *)[UNIVERSE gameView] allowStringInput:NO];
-	[UNIVERSE setDisplayCursor:NO];
+	[UNIVERSE enterGUIViewModeWithMouseInteraction:NO];
 	[self noteGUIDidChangeFrom:oldScreen to:gui_screen];
 }
 
@@ -467,15 +470,18 @@ static NSTimeInterval	time_last_frame;
 	
 	// does fullscreen / quit / snapshot
 	MyOpenGLView  *gameView = [UNIVERSE gameView];
+	GameController *gameController = [UNIVERSE gameController];
 	
 	NS_DURING
-		//  command-key controls
-		if ([[gameView gameController] inFullScreenMode])
+	//  command-key controls
+	#if !OOLITE_MAC_OS_X || !OOLITE_64_BIT	// On 64-bit Macs, these are handled by normal menu shortcuts.
+		if ([gameController inFullScreenMode])
 		{
 			exceptionContext = @"command key controls";
 			if ([gameView isCommandFDown])
 			{
-				[[gameView gameController] exitFullScreenMode];
+				[gameView clearCommandF];
+				[gameController exitFullScreenMode];
 				if (mouse_control_on)
 				{
 					[UNIVERSE addMessage:DESC(@"mouse-off") forCount:3.0];
@@ -485,15 +491,16 @@ static NSTimeInterval	time_last_frame;
 			
 			if ([gameView isCommandQDown])
 			{
-				[[gameView gameController] pauseFullScreenModeToPerform:@selector(exitAppCommandQ) onTarget:[gameView gameController]];
+				[gameController pauseFullScreenModeToPerform:@selector(exitAppCommandQ) onTarget:gameController];
 			}
 		}
+	#endif
 		
 	#if OOLITE_WINDOWS
 		if ( ([gameView isDown:'Q']) )
 		{
 			exceptionContext = @"windows - Q";
-			[[gameView gameController] exitAppWithContext:@"Q pressed [Windows]"];
+			[gameController exitAppWithContext:@"Q pressed [Windows]"];
 			exit(0); // Force it
 		}
 	#endif
@@ -504,11 +511,11 @@ static NSTimeInterval	time_last_frame;
 			exceptionContext = @"error handling mode";
 			if ([gameView isDown:113]||[gameView isDown:81]||[gameView isDown:27])   // 'q' | 'Q' | esc
 			{
-				[[gameView gameController] exitAppWithContext:@"Q or escape pressed in error handling mode"];
+				[gameController exitAppWithContext:@"Q or escape pressed in error handling mode"];
 			}
 		}
 		
-		if ([[gameView gameController] isGamePaused])
+		if ([gameController isGamePaused])
 		{
 			// What's the status?
 			switch ([self status])
@@ -525,12 +532,11 @@ static NSTimeInterval	time_last_frame;
 						// In all other cases we can't handle pause. Unpause immediately.
 						script_time = saved_script_time;
 						[gameView allowStringInput:NO];
-						[UNIVERSE setDisplayCursor:NO];
 						if ([UNIVERSE pauseMessageVisible])
 						{
 							[UNIVERSE clearPreviousMessage];	// remove the 'paused' message.
 						}
-						[[gameView gameController] unpauseGame];
+						[gameController setGamePaused:NO];
 					}
 					break;
 			}
@@ -570,7 +576,7 @@ static NSTimeInterval	time_last_frame;
 	#if OO_DEBUG
 		allowMouseControl = YES;
 	#else
-		allowMouseControl = [[gameView gameController] inFullScreenMode] ||
+		allowMouseControl = [gameController inFullScreenMode] ||
 					[[NSUserDefaults standardUserDefaults] boolForKey:@"mouse-control-in-windowed-mode"];
 	#endif
 		
@@ -601,6 +607,10 @@ static NSTimeInterval	time_last_frame;
 						[UNIVERSE addMessage:DESC(@"mouse-off") forCount:3.0];
 					}
 				}
+				if (OOMouseInteractionModeIsFlightMode([gameController mouseInteractionMode]))
+				{
+					[gameController setMouseInteractionModeForFlight];
+				}
 				m_key_pressed = YES;
 			}
 			else
@@ -614,11 +624,16 @@ static NSTimeInterval	time_last_frame;
 			{
 				mouse_control_on = NO;
 				[UNIVERSE addMessage:DESC(@"mouse-off") forCount:3.0];
+				
+				if (OOMouseInteractionModeIsFlightMode([gameController mouseInteractionMode]))
+				{
+					[gameController setMouseInteractionModeForFlight];
+				}
 			}
 		}
 		
 		// HUD toggle
-		if ([gameView isDown:key_hud_toggle] && [[gameView gameController] isGamePaused])	// 'o' key while paused
+		if ([gameView isDown:key_hud_toggle] && [gameController isGamePaused])	// 'o' key while paused
 		{
 			exceptionContext = @"toggle HUD";
 			if (!hide_hud_pressed)
@@ -650,7 +665,7 @@ static NSTimeInterval	time_last_frame;
 		exceptionContext = @"joystick handling";
 		const BOOL *joyButtonState = [[OOJoystickManager sharedStickHandler] getAllButtonStates];
 		
-		BOOL paused = [[gameView gameController] isGamePaused];
+		BOOL paused = [[UNIVERSE gameController] isGamePaused];
 		double speed_delta = 5.0 * thrust;
 		
 		if (!paused && gui_screen == GUI_SCREEN_MISSION)
@@ -719,7 +734,7 @@ static NSTimeInterval	time_last_frame;
 			//  view keys
 			[self pollViewControls];
 			
-			if (![UNIVERSE displayCursor])
+			if (OOMouseInteractionModeIsFlightMode([[UNIVERSE gameController] mouseInteractionMode]))
 			{
 				exceptionContext = @"afterburner";
 				if ((joyButtonState[BUTTON_FUELINJECT] || [gameView isDown:key_inject_fuel]) &&
@@ -860,7 +875,7 @@ static NSTimeInterval	time_last_frame;
 				//  shoot 'y'   // next missile
 				if ([gameView isDown:key_next_missile] || joyButtonState[BUTTON_CYCLEMISSILE])
 				{
-					if ((!ident_engaged)&&(!next_missile_pressed))
+					if (!ident_engaged && !next_missile_pressed && [self weaponsOnline])
 					{
 						[self playNextMissileSelected];
 						[self selectNextMissile];
@@ -871,7 +886,7 @@ static NSTimeInterval	time_last_frame;
 				
 				exceptionContext = @"next target";
 				//	'+' // next target
-				if ([gameView isDown:key_next_target])
+				if ([gameView isDown:key_next_target] || joyButtonState[BUTTON_NEXTTARGET])
 				{
 					if ((!next_target_pressed)&&([self hasEquipmentItem:@"EQ_TARGET_MEMORY"]))
 					{
@@ -883,7 +898,7 @@ static NSTimeInterval	time_last_frame;
 				
 				exceptionContext = @"previous target";
 				//	'-' // previous target
-				if ([gameView isDown:key_previous_target])
+				if ([gameView isDown:key_previous_target] || joyButtonState[BUTTON_PREVTARGET])
 				{
 					if ((!previous_target_pressed)&&([self hasEquipmentItem:@"EQ_TARGET_MEMORY"]))
 					{
@@ -900,24 +915,7 @@ static NSTimeInterval	time_last_frame;
 					// ident 'on' here
 					if (!ident_pressed)
 					{
-						// Clear current target if we're already in Ident mode
-						if (ident_engaged)
-						{
-							if (primaryTarget != NO_TARGET) [self noteLostTarget];
-							primaryTarget = NO_TARGET;
-						}
-						[self safeAllMissiles];
-						ident_engaged = YES;
-						if ([self primaryTargetID] == NO_TARGET)
-						{
-							[self playIdentOn];
-							[UNIVERSE addMessage:DESC(@"ident-on") forCount:2.0];
-						}
-						else
-						{
-							[self playIdentLockedOn];
-							[self printIdentLockedOnForMissile:NO];
-						}
+						[self handleButtonIdent];
 					}
 					ident_pressed = YES;
 				}
@@ -1027,37 +1025,7 @@ static NSTimeInterval	time_last_frame;
 					// targeting 'on' here
 					if (!target_missile_pressed)
 					{
-						// Clear current target if we're already in Missile Targeting mode
-						if (missile_status != MISSILE_STATUS_SAFE)
-						{
-							primaryTarget = NO_TARGET;
-						}
-
-						// Arm missile and check for missile lock
-						missile_status = MISSILE_STATUS_ARMED;
-						if ([missile_entity[activeMissile] isMissile])
-						{
-							if ([[self primaryTarget] isShip])
-							{
-								missile_status = MISSILE_STATUS_TARGET_LOCKED;
-								[missile_entity[activeMissile] addTarget:[self primaryTarget]];
-								[self printIdentLockedOnForMissile:YES];
-								[self playMissileLockedOn];
-							}
-							else
-							{
-								[self removeTarget:nil];
-								[missile_entity[activeMissile] removeTarget:nil];
-								[UNIVERSE addMessage:[NSString stringWithFormat:DESC(@"@-armed"), [missile_entity[activeMissile] name]] forCount:2.0];
-								[self playMissileArmed];
-							}
-						}
-						else if ([missile_entity[activeMissile] isMine])
-						{
-							[UNIVERSE addMessage:[NSString stringWithFormat:DESC(@"@-armed"), [missile_entity[activeMissile] name]] forCount:2.0];
-							[self playMineArmed];
-						}
-						ident_engaged = NO;
+						[self handleButtonTargetMissile];
 					}
 					target_missile_pressed = YES;
 				}
@@ -1070,10 +1038,10 @@ static NSTimeInterval	time_last_frame;
 					if (!safety_pressed)
 					{
 						//targeting off in both cases!
-						if (primaryTarget != NO_TARGET) [self noteLostTarget];
-						primaryTarget = NO_TARGET;
+						if ([self primaryTarget] != nil) [self noteLostTarget];
+						DESTROY(_primaryTarget);
 						[self safeAllMissiles];
-						if (!ident_engaged)
+						if (!ident_engaged && [self weaponsOnline])
 						{
 							[UNIVERSE addMessage:DESC(@"missile-safe") forCount:2.0];
 							[self playMissileSafe];
@@ -1144,7 +1112,9 @@ static NSTimeInterval	time_last_frame;
 						}
 					}
 					if (goodToLaunch)
-						found_target = [self launchEscapeCapsule];
+					{
+						[self setFoundTarget:[self launchEscapeCapsule]];
+					}
 				}
 				
 				exceptionContext = @"dump cargo";
@@ -1461,8 +1431,8 @@ static NSTimeInterval	time_last_frame;
 				if (!leftRightKeyPressed)
 				{
 					float newTimeAccelerationFactor = [gameView isDown:gvArrowKeyLeft] ? 
-							fmaxf([UNIVERSE timeAccelerationFactor] / 2.0f, TIME_ACCELERATION_FACTOR_MIN) :
-							fminf([UNIVERSE timeAccelerationFactor] * 2.0f, TIME_ACCELERATION_FACTOR_MAX);
+							fmax([UNIVERSE timeAccelerationFactor] / 2.0f, TIME_ACCELERATION_FACTOR_MIN) :
+							fmin([UNIVERSE timeAccelerationFactor] * 2.0f, TIME_ACCELERATION_FACTOR_MAX);
 					[UNIVERSE setTimeAccelerationFactor:newTimeAccelerationFactor];
 				}
 				leftRightKeyPressed = YES;
@@ -1516,13 +1486,12 @@ static NSTimeInterval	time_last_frame;
 							break;
 					}
 					[gameView allowStringInput:NO];
-					[UNIVERSE setDisplayCursor:NO];
 					[UNIVERSE clearPreviousMessage];
 					[UNIVERSE setViewDirection:saved_view_direction];
 					// make sure the light comes from the right direction after resuming from pause!
 					if (saved_gui_screen == GUI_SCREEN_SYSTEM_DATA) [UNIVERSE setMainLightPosition:_sysInfoLight];
 					[[UNIVERSE gui] setForegroundTextureKey:@"overlay"];
-					[[gameView gameController] unpauseGame];
+					[[UNIVERSE gameController] setGamePaused:NO];
 				}
 				else
 				{
@@ -1550,7 +1519,6 @@ static NSTimeInterval	time_last_frame;
 	MyOpenGLView	*gameView = [UNIVERSE gameView];
 	BOOL			moving = NO;
 	double			cursor_speed = 10.0;
-	NSString		*commanderFile;
 	GameController  *controller = [UNIVERSE gameController];
 	GuiDisplayGen	*gui = [UNIVERSE gui];
 	GUI_ROW_INIT(gui);
@@ -1780,14 +1748,18 @@ static NSTimeInterval	time_last_frame;
 				queryPressed = NO;
 			break;
 			
+#if OO_USE_CUSTOM_LOAD_SAVE
 			// DJS: Farm off load/save screen options to LoadSave.m
 		case GUI_SCREEN_LOAD:
-			commanderFile = [self commanderSelector];
+		{
+			NSString *commanderFile = [self commanderSelector];
 			if(commanderFile)
 			{
 				[self loadPlayerFromFile:commanderFile];
 			}
 			break;
+		}
+			
 		case GUI_SCREEN_SAVE:
 			[self pollGuiScreenControlsWithFKeyAlias:NO];
 			if ([gameView isDown:gvFunctionKey1])  [self handleUndockControl];
@@ -1801,30 +1773,40 @@ static NSTimeInterval	time_last_frame;
 		case GUI_SCREEN_SAVE_OVERWRITE:
 			[self overwriteCommanderInputHandler];
 			break;
+#endif
 			
 		case GUI_SCREEN_STICKMAPPER:
 			[self stickMapperInputHandler: gui view: gameView];
 
-			leftRightKeyPressed = [gameView isDown:gvArrowKeyRight]|[gameView isDown:gvArrowKeyLeft];
+			leftRightKeyPressed = [gameView isDown:gvArrowKeyRight] || [gameView isDown:gvArrowKeyLeft];
 			if (leftRightKeyPressed)
 			{
-				NSString* key = [gui keyForRow: [gui selectedRow]];
+				NSString *key = [gui keyForRow: [gui selectedRow]];
 				if ([gameView isDown:gvArrowKeyRight])
 				{
-					key = [gui keyForRow: GUI_ROW_FUNCEND];
+					key = [gui keyForRow:GUI_ROW_FUNCEND];
 				}
 				if ([gameView isDown:gvArrowKeyLeft])
 				{
-					key = [gui keyForRow: GUI_ROW_FUNCSTART];
+					key = [gui keyForRow:GUI_ROW_FUNCSTART];
 				}
-				int from_function = [[[key componentsSeparatedByString:@":"] objectAtIndex: 1] intValue];
-				if (from_function < 0)  from_function = 0;
-				
-				[self setGuiToStickMapperScreen:from_function];
-				if ([[UNIVERSE gui] selectedRow] < 0)
-					[[UNIVERSE gui] setSelectedRow: GUI_ROW_FUNCSTART];
-				if (from_function == 0)
-					[[UNIVERSE gui] setSelectedRow: GUI_ROW_FUNCSTART + MAX_ROWS_FUNCTIONS - 1];
+				int from_function = 0;
+				NSArray *keyComponents = [key componentsSeparatedByString:@":"];
+				if ([keyComponents count] > 1)
+				{
+					from_function = [keyComponents oo_intAtIndex:1];
+					if (from_function < 0)  from_function = 0;
+					
+					[self setGuiToStickMapperScreen:from_function];
+					if ([[UNIVERSE gui] selectedRow] < 0)
+					{
+						[[UNIVERSE gui] setSelectedRow: GUI_ROW_FUNCSTART];
+					}
+					if (from_function == 0)
+					{
+						[[UNIVERSE gui] setSelectedRow: GUI_ROW_FUNCSTART + MAX_ROWS_FUNCTIONS - 1];
+					}
+				}
 			}
 			break;
 			
@@ -1896,7 +1878,7 @@ static NSTimeInterval	time_last_frame;
 			// vs fullscreen.
 			if ((guiSelectedRow == GUI_ROW(,QUIT)) && selectKeyPress)
 			{
-				[[gameView gameController] exitAppWithContext:@"Exit Game selected on options screen"];
+				[[UNIVERSE gameController] exitAppWithContext:@"Exit Game selected on options screen"];
 			}
 #endif
 			
@@ -2198,6 +2180,62 @@ static NSTimeInterval	time_last_frame;
 			}
 
 			break;
+		case GUI_SCREEN_MANIFEST:
+			[self handleGUIUpDownArrowKeys];
+			if ([gameView isDown:gvArrowKeyLeft])
+			{
+
+				if ((!leftRightKeyPressed)||(script_time > timeLastKeyPress + KEY_REPEAT_INTERVAL))
+				{
+					if ([[gui keyForRow:MANIFEST_SCREEN_ROW_BACK] isEqual:GUI_KEY_OK])
+					{
+						[gui setSelectedRow:MANIFEST_SCREEN_ROW_BACK];
+						[self playMenuPagePrevious];
+						[gui setStatusPage:-1];
+						[self setGuiToManifestScreen];
+					}
+					timeLastKeyPress = script_time;
+				}
+			}
+			if ([gameView isDown:gvArrowKeyRight])
+			{
+
+				if ((!leftRightKeyPressed)||(script_time > timeLastKeyPress + KEY_REPEAT_INTERVAL))
+				{
+					if ([[gui keyForRow:MANIFEST_SCREEN_ROW_NEXT] isEqual:GUI_KEY_OK])
+					{
+						[gui setSelectedRow:MANIFEST_SCREEN_ROW_NEXT];
+						[self playMenuPageNext];
+						[gui setStatusPage:+1];
+						[self setGuiToManifestScreen];
+					}
+					timeLastKeyPress = script_time;
+				}
+			}
+			leftRightKeyPressed = [gameView isDown:gvArrowKeyRight]|[gameView isDown:gvArrowKeyLeft];
+			
+			if ([gameView isDown:13] || [gameView isDown:gvMouseDoubleClick])   // 'enter'
+			{
+				if ([gameView isDown:gvMouseDoubleClick])
+				{
+					selectPressed = NO;
+					[gameView clearMouse];
+				}
+				if ((!selectPressed)&&([gui selectedRow] > -1))
+				{
+					[gui setStatusPage:([gui selectedRow] == MANIFEST_SCREEN_ROW_BACK ? -1 : +1)];
+					[self setGuiToManifestScreen];
+
+					selectPressed = YES;
+				}
+			}
+			else
+			{
+				selectPressed = NO;
+			}
+
+			break;
+
 		case GUI_SCREEN_SHIPYARD:
 			if ([self handleGUIUpDownArrowKeys])
 			{
@@ -2301,8 +2339,6 @@ static NSTimeInterval	time_last_frame;
 
 - (void) handleGameOptionsScreenKeys
 {
-	GameController		*controller = [UNIVERSE gameController];
-	NSArray				*modes = [controller displayModes];
 	MyOpenGLView		*gameView = [UNIVERSE gameView];
 	GuiDisplayGen		*gui = [UNIVERSE gui];
 	GUI_ROW_INIT(gui);
@@ -2318,13 +2354,17 @@ static NSTimeInterval	time_last_frame;
 		[self setGuiToStickMapperScreen: 0];
 	}
 	
+#if OO_RESOLUTION_OPTION
 	if (!switching_resolution &&
 		guiSelectedRow == GUI_ROW(GAME,DISPLAY) &&
 		([gameView isDown:gvArrowKeyRight] || [gameView isDown:gvArrowKeyLeft]))
 	{
-		int			direction = ([gameView isDown:gvArrowKeyRight]) ? 1 : -1;
-		OOInteger	displayModeIndex = [controller indexOfCurrentDisplayMode];
-		if (displayModeIndex == NSNotFound)
+		GameController	*controller = [UNIVERSE gameController];
+		int				direction = ([gameView isDown:gvArrowKeyRight]) ? 1 : -1;
+		OOInteger		displayModeIndex = [controller indexOfCurrentDisplayMode];
+		NSArray			*modes = [controller displayModes];
+		
+		if (displayModeIndex == (OOInteger)NSNotFound)
 		{
 			OOLogWARN(@"graphics.mode.notFound", @"couldn't find current fullscreen setting, switching to default.");
 			displayModeIndex = 0;
@@ -2349,9 +2389,8 @@ static NSTimeInterval	time_last_frame;
 		[self playChangedOption];
 		[gui setText:displayModeString	forRow:GUI_ROW(GAME,DISPLAY)  align:GUI_ALIGN_CENTER];
 		switching_resolution = YES;
-#if OOLITE_HAVE_APPKIT
-		if ([controller inFullScreenMode]) [controller changeFullScreenResolution]; // changes fullscreen mode immediately
-#elif OOLITE_SDL
+		
+#if OOLITE_SDL
 		/*	TODO: The gameView for the SDL game currently holds and
 		 sets the actual screen resolution (controller just stores
 		 it). This probably ought to change. */
@@ -2362,6 +2401,7 @@ static NSTimeInterval	time_last_frame;
 	{
 		switching_resolution = NO;
 	}
+#endif	// OO_RESOLUTION_OPTION
 	
 #if OOLITE_SPEECH_SYNTH
 	if ((guiSelectedRow == GUI_ROW(GAME,SPEECH))&&(([gameView isDown:gvArrowKeyRight])||([gameView isDown:gvArrowKeyLeft])))
@@ -2531,43 +2571,6 @@ static NSTimeInterval	time_last_frame;
 	}
 	else
 		gammaControlPressed = NO;
-#endif
-	
-#if OOLITE_MAC_OS_X && GROOLITE_VISIBLE
-	if ((guiSelectedRow == GUI_ROW(GAME,GROWL))&&([gameView isDown:gvArrowKeyRight]||[gameView isDown:gvArrowKeyLeft]))
-	{
-		if ([Groolite isEnabled] && (!leftRightKeyPressed || script_time > timeLastKeyPress + KEY_REPEAT_INTERVAL))
-		{
-			NSUserDefaults* prefs = [NSUserDefaults standardUserDefaults];
-			BOOL rightKeyDown = [gameView isDown:gvArrowKeyRight];
-			BOOL leftKeyDown = [gameView isDown:gvArrowKeyLeft];
-			int growl_min_priority = 3;
-			if ([prefs objectForKey:@"groolite-min-priority"])
-				growl_min_priority = [prefs integerForKey:@"groolite-min-priority"];
-			int new_priority = growl_min_priority;
-			if (rightKeyDown)
-				new_priority--;
-			if (leftKeyDown)
-				new_priority++;
-			if (new_priority < kGroolitePriorityMinimum)	// sanity check values -2 .. 3
-				new_priority = kGroolitePriorityMinimum;
-			if (new_priority > kGroolitePriorityMaximum)
-				new_priority = kGroolitePriorityMaximum;
-			if (new_priority != growl_min_priority)
-			{
-				growl_min_priority = new_priority;
-				NSString* growl_priority_desc = [Groolite priorityDescription:growl_min_priority];
-				[gui setText:[NSString stringWithFormat:DESC(@"gameoptions-show-growl-messages-@"), growl_priority_desc]
-					  forRow:GUI_ROW(GAME,GROWL) align:GUI_ALIGN_CENTER];
-				[self playChangedOption];
-				[prefs setInteger:growl_min_priority forKey:@"groolite-min-priority"];
-			}
-			timeLastKeyPress = script_time;
-		}
-		leftRightKeyPressed = YES;
-	}
-	else
-		leftRightKeyPressed = NO;
 #endif
 	
 	if ((guiSelectedRow == GUI_ROW(GAME,WIREFRAMEGRAPHICS))&&(([gameView isDown:gvArrowKeyRight])||([gameView isDown:gvArrowKeyLeft])))
@@ -3179,7 +3182,7 @@ static BOOL autopilot_pause;
 	
 	MyOpenGLView  *gameView = [UNIVERSE gameView];
 	
-	if (![[gameView gameController] isGamePaused])
+	if (![[UNIVERSE gameController] isGamePaused])
 	{
 		//  view keys
 		[self pollViewControls];
@@ -3264,7 +3267,7 @@ static BOOL autopilot_pause;
 - (void) pollDockedControls:(double)delta_t
 {
 	MyOpenGLView			*gameView = [UNIVERSE gameView];
-	GameController			*gameController = [gameView gameController];
+	GameController			*gameController = [UNIVERSE gameController];
 	NSString * volatile		exceptionContext = @"setup";
 	
 	NS_DURING
@@ -3280,13 +3283,12 @@ static BOOL autopilot_pause;
 				{
 					script_time = saved_script_time;
 					[gameView allowStringInput:NO];
-					[UNIVERSE setDisplayCursor:NO];
 					if ([UNIVERSE pauseMessageVisible])
 					{
 						[UNIVERSE clearPreviousMessage];	// remove the 'paused' message.
 					}
 					[[UNIVERSE gui] setForegroundTextureKey:@"docked_overlay"];
-					[gameController unpauseGame];
+					[gameController setGamePaused:NO];
 				}
 				else
 				{
@@ -3489,7 +3491,6 @@ static BOOL autopilot_pause;
 			[self endMissionScreenAndNoteOpportunity];	// missionScreenEnded, plus opportunity events.
 		}
 	}
-
 }
 
 
@@ -3615,6 +3616,7 @@ static BOOL autopilot_pause;
 		}
 		[self setDockingClearanceStatus:DOCKING_CLEARANCE_STATUS_GRANTED];
 		
+		[UNIVERSE forceWitchspaceEntries];
 		ship_clock_adjust += 1200.0;			// 20 minutes penalty to enter dock
 		ident_engaged = NO;
 		[self safeAllMissiles];
@@ -3632,6 +3634,68 @@ abort:
 	// Clean-up code
 	if (message != nil) [UNIVERSE addMessage:message forCount:4.5];
 	return;
+}
+
+
+- (void) handleButtonIdent
+{
+	// Clear current target if we're already in Ident mode
+	if (ident_engaged)  [self noteLostTarget];
+	
+	[self safeAllMissiles];
+	ident_engaged = YES;
+	if ([self primaryTarget] == nil)
+	{
+		[self playIdentOn];
+		[UNIVERSE addMessage:DESC(@"ident-on") forCount:2.0];
+	}
+	else
+	{
+		[self playIdentLockedOn];
+		[self printIdentLockedOnForMissile:NO];
+	}
+}
+
+
+- (void) handleButtonTargetMissile
+{
+	if (![self weaponsOnline])
+	{
+		[self handleButtonIdent];
+		return;
+	}
+	
+	// Clear current target if we're already in Missile Targeting mode
+	if (missile_status != MISSILE_STATUS_SAFE)
+	{
+		DESTROY(_primaryTarget);
+	}
+	
+	// Arm missile and check for missile lock
+	missile_status = MISSILE_STATUS_ARMED;
+	if ([missile_entity[activeMissile] isMissile])
+	{
+		if ([[self primaryTarget] isShip])
+		{
+			missile_status = MISSILE_STATUS_TARGET_LOCKED;
+			[missile_entity[activeMissile] addTarget:[self primaryTarget]];
+			[self printIdentLockedOnForMissile:YES];
+			[self playMissileLockedOn];
+		}
+		else
+		{
+			[self noteLostTarget];
+			[missile_entity[activeMissile] noteLostTarget];
+			[UNIVERSE addMessage:[NSString stringWithFormat:DESC(@"@-armed"), [missile_entity[activeMissile] name]] forCount:2.0];
+			[self playMissileArmed];
+		}
+	}
+	else if ([missile_entity[activeMissile] isMine])
+	{
+		[UNIVERSE addMessage:[NSString stringWithFormat:DESC(@"@-armed"), [missile_entity[activeMissile] name]] forCount:2.0];
+		[self playMineArmed];
+	}
+	ident_engaged = NO;
 }
 
 @end

@@ -71,6 +71,9 @@ enum
 {
 	// Property IDs
 	kStation_alertCondition,
+	kStation_allowsAutoDocking,
+	kStation_allowsFastDocking,
+	kStation_breakPattern,
 	kStation_dockedContractors, // miners and scavengers.
 	kStation_dockedDefenders,
 	kStation_dockedPolice,
@@ -80,8 +83,6 @@ enum
 	kStation_hasShipyard,
 	kStation_isMainStation,		// Is [UNIVERSE station], boolean, read-only
 	kStation_requiresDockingClearance,
-	kStation_allowsFastDocking,
-	kStation_allowsAutoDocking,
 	kStation_suppressArrivalReports,
 };
 
@@ -92,6 +93,7 @@ static JSPropertySpec sStationProperties[] =
 	{ "alertCondition",				kStation_alertCondition,			OOJS_PROP_READWRITE_CB },
 	{ "allowsAutoDocking",			kStation_allowsAutoDocking,			OOJS_PROP_READWRITE_CB },
 	{ "allowsFastDocking",			kStation_allowsFastDocking,			OOJS_PROP_READWRITE_CB },
+	{ "breakPattern",				kStation_breakPattern,				OOJS_PROP_READWRITE_CB },
 	{ "dockedContractors",			kStation_dockedContractors,			OOJS_PROP_READONLY_CB },
 	{ "dockedDefenders",			kStation_dockedDefenders,			OOJS_PROP_READONLY_CB },
 	{ "dockedPolice",				kStation_dockedPolice,				OOJS_PROP_READONLY_CB },
@@ -211,15 +213,15 @@ static JSBool StationGetProperty(JSContext *context, JSObject *this, jsid propID
 			return YES;
 
 		case kStation_dockedContractors:
-			*value = INT_TO_JSVAL([entity dockedContractors]);
+			*value = INT_TO_JSVAL([entity countOfDockedContractors]);
 			return YES;
 			
 		case kStation_dockedPolice:
-			*value = INT_TO_JSVAL([entity dockedPolice]);
+			*value = INT_TO_JSVAL([entity countOfDockedPolice]);
 			return YES;
 			
 		case kStation_dockedDefenders:
-			*value = INT_TO_JSVAL([entity dockedDefenders]);
+			*value = INT_TO_JSVAL([entity countOfDockedDefenders]);
 			return YES;
 			
 		case kStation_equivalentTechLevel:
@@ -233,6 +235,10 @@ static JSBool StationGetProperty(JSContext *context, JSObject *this, jsid propID
 			*value = OOJSValueFromBOOL([entity suppressArrivalReports]);
 			return YES;
 			
+		case kStation_breakPattern:
+			*value = OOJSValueFromBOOL([entity hasBreakPattern]);
+			return YES;
+
 		default:
 			OOJSReportBadPropertySelector(context, this, propID, sStationProperties);
 			return NO;
@@ -304,6 +310,14 @@ static JSBool StationSetProperty(JSContext *context, JSObject *this, jsid propID
 				return YES;
 			}
 			break;
+
+		case kStation_breakPattern:
+			if (JS_ValueToBoolean(context, *value, &bValue))
+			{
+				[entity setHasBreakPattern:bValue];
+				return YES;
+			}
+			break;
 		
 		default:
 			OOJSReportBadPropertySelector(context, this, propID, sStationProperties);
@@ -326,14 +340,15 @@ static JSBool StationDockPlayer(JSContext *context, uintN argc, jsval *vp)
 	OOJS_NATIVE_ENTER(context)
 	
 	PlayerEntity	*player = OOPlayerForScripting();
+	GameController	*gameController = [UNIVERSE gameController];
 	
-	if (EXPECT_NOT([UNIVERSE isGamePaused]))
+	if (EXPECT_NOT([gameController isGamePaused]))
 	{
 		/*	Station.dockPlayer() was executed while the game was in pause.
 			Do we want to return an error or just unpause and continue?
 			I think unpausing is the sensible thing to do here - Nikos 20110208
 		*/
-		[[[UNIVERSE gameView] gameController] unpauseGame];
+		[gameController setGamePaused:NO];
 	}
 	
 	if (EXPECT(![player isDocked]))

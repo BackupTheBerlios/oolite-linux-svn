@@ -34,6 +34,7 @@ MA 02110-1301, USA.
 #import "OOMusicController.h"
 #import "GuiDisplayGen.h"
 
+static JSBool MissionGetProperty(JSContext *context, JSObject *this, jsid propID, jsval *value);
 
 static JSBool MissionMarkSystem(JSContext *context, uintN argc, jsval *vp);
 static JSBool MissionUnmarkSystem(JSContext *context, uintN argc, jsval *vp);
@@ -58,12 +59,26 @@ static JSClass sMissionClass =
 	
 	JS_PropertyStub,
 	JS_PropertyStub,
-	JS_PropertyStub,
+	MissionGetProperty,
 	JS_StrictPropertyStub,
 	JS_EnumerateStub,
 	JS_ResolveStub,
 	JS_ConvertStub,
 	JS_FinalizeStub
+};
+
+
+enum
+{
+	kMission_markedSystems,
+};
+
+
+static JSPropertySpec sMissionProperties[] = 
+{
+	// JS name					ID								flags
+	{ "markedSystems", kMission_markedSystems, OOJS_PROP_READONLY_CB },
+	{ 0 }
 };
 
 
@@ -85,7 +100,7 @@ void InitOOJSMission(JSContext *context, JSObject *global)
 	sCallbackFunction = JSVAL_NULL;
 	sCallbackThis = JSVAL_NULL;
 	
-	JSObject *missionPrototype = JS_InitClass(context, global, NULL, &sMissionClass, OOJSUnconstructableConstruct, 0, NULL, sMissionMethods, NULL, NULL);
+	JSObject *missionPrototype = JS_InitClass(context, global, NULL, &sMissionClass, OOJSUnconstructableConstruct, 0, sMissionProperties, sMissionMethods, NULL, NULL);
 	sMissionObject = JS_DefineObject(context, global, "mission", &sMissionClass, missionPrototype, OOJS_PROP_READONLY);
 	
 	// Ensure JS objects are rooted.
@@ -150,6 +165,35 @@ void MissionRunCallback()
 }
 
 
+static JSBool MissionGetProperty(JSContext *context, JSObject *this, jsid propID, jsval *value) 
+{
+	if (!JSID_IS_INT(propID))  return YES;
+	
+	OOJS_NATIVE_ENTER(context)
+
+	id result = nil;
+	PlayerEntity		*player = OOPlayerForScripting();
+
+	switch (JSID_TO_INT(propID))
+	{
+		case kMission_markedSystems:
+			result = [player getMissionDestinations];
+			if (result == nil)  result = [NSDictionary dictionary];
+			result = [result allValues];
+			break;
+
+		default:
+			OOJSReportBadPropertySelector(context, this, propID, sMissionProperties);
+			return NO;
+	}
+
+	*value = OOJSValueFromNativeObject(context, result);
+	return YES;
+	
+	OOJS_NATIVE_EXIT
+}
+
+
 // *** Methods ***
 
 // markSystem(integer+)
@@ -158,11 +202,40 @@ static JSBool MissionMarkSystem(JSContext *context, uintN argc, jsval *vp)
 	OOJS_NATIVE_ENTER(context)
 	
 	PlayerEntity		*player = OOPlayerForScripting();
-	NSString			*params = nil;
-	
-	params = [NSString concatenationOfStringsFromJavaScriptValues:OOJS_ARGV count:argc separator:@" " inContext:context];
-	[player addMissionDestination:params];
-	
+	unsigned i;
+	int dest;
+
+	// two pass. Once to validate, once to apply if they validate
+	for (i=0;i<argc;i++)
+	{
+		if (!JS_ValueToInt32(context, OOJS_ARGV[i], &dest)) 
+		{
+			JS_ClearPendingException(context); // or JS_ValueToInt32 exception crashes JS engine
+			if (!JSVAL_IS_OBJECT(OOJS_ARGV[i]))
+			{
+				OOJSReportBadArguments(context, @"Mission", @"markSystem", MIN(argc, 1U), OOJS_ARGV, nil, @"numbers or objects");
+				return NO;
+			}
+		}
+	}
+
+	for (i=0;i<argc;i++)
+	{
+		if (JS_ValueToInt32(context, OOJS_ARGV[i], &dest)) 
+		{
+			[player addMissionDestinationMarker:[player defaultMarker:dest]];
+		}
+		else // must be object, from above
+		{
+			JS_ClearPendingException(context); // or JS_ValueToInt32 exception crashes JS engine
+			NSDictionary *marker = OOJSNativeObjectFromJSObject(context, JSVAL_TO_OBJECT(OOJS_ARGV[i]));
+			OOSystemID system = [marker oo_intForKey:@"system" defaultValue:-1];
+			if (system >= 0)
+			{
+				[player addMissionDestinationMarker:marker];
+			}
+		}
+	}
 	OOJS_RETURN_VOID;
 	
 	OOJS_NATIVE_EXIT
@@ -175,12 +248,47 @@ static JSBool MissionUnmarkSystem(JSContext *context, uintN argc, jsval *vp)
 	OOJS_NATIVE_ENTER(context)
 	
 	PlayerEntity		*player = OOPlayerForScripting();
-	NSString			*params = nil;
+	unsigned i;
+	int dest;
+
+	// two pass. Once to validate, once to apply if they validate
+	for (i=0;i<argc;i++)
+	{
+		if (!JS_ValueToInt32(context, OOJS_ARGV[i], &dest)) 
+		{
+			JS_ClearPendingException(context); // or JS_ValueToInt32 exception crashes JS engine
+			if (!JSVAL_IS_OBJECT(OOJS_ARGV[i]))
+			{
+				OOJSReportBadArguments(context, @"Mission", @"unmarkSystem", MIN(argc, 1U), OOJS_ARGV, nil, @"numbers or objects");
+				return NO;
+			}
+		}
+	}
+
+	BOOL result = YES;
+	for (i=0;i<argc;i++)
+	{
+		if (JS_ValueToInt32(context, OOJS_ARGV[i], &dest)) 
+		{
+			if (![player removeMissionDestinationMarker:[player defaultMarker:dest]]) {
+				result = NO;
+			}
+		}
+		else // must be object, from above
+		{
+			JS_ClearPendingException(context); // or JS_ValueToInt32 exception crashes JS engine
+			NSDictionary *marker = OOJSNativeObjectFromJSObject(context, JSVAL_TO_OBJECT(OOJS_ARGV[i]));
+			OOSystemID system = [marker oo_intForKey:@"system" defaultValue:-1];
+			if (system >= 0)
+			{
+				if (![player removeMissionDestinationMarker:marker]) {
+					result = NO;
+				}
+			}
+		}
+	}
 	
-	params = [NSString concatenationOfStringsFromJavaScriptValues:OOJS_ARGV count:argc separator:@" " inContext:context];
-	[player removeMissionDestination:params];
-	
-	OOJS_RETURN_VOID;
+	OOJS_RETURN_BOOL(result);
 	
 	OOJS_NATIVE_EXIT
 }
@@ -251,7 +359,7 @@ static JSBool MissionSetInstructionsInternal(JSContext *context, uintN argc, jsv
 	
 	if (argc > 1)
 	{
-		missionKey = [NSString stringWithJavaScriptValue:OOJS_ARGV[1] inContext:context];
+		missionKey = OOStringFromJSValueEvenIfNull(context, OOJS_ARGV[1]);
 	}
 	else
 	{
@@ -458,3 +566,5 @@ static JSBool MissionRunScreen(JSContext *context, uintN argc, jsval *vp)
 	
 	OOJS_NATIVE_EXIT
 }
+
+

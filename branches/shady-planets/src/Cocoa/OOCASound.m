@@ -133,7 +133,7 @@ static struct
 	if (!gOOSoundSetUp)
 	{
 		gOOCASoundSyncLock = [[NSRecursiveLock alloc] init];
-		[gOOCASoundSyncLock ooSetName:@"OOCASound synchronization lock"];
+		[gOOCASoundSyncLock setName:@"OOCASound synchronization lock"];
 		if (nil == gOOCASoundSyncLock)
 		{
 			OOLog(kOOLogSoundInitError, @"Failed to set up sound (lock allocation failed). No sound will be played.");
@@ -361,9 +361,9 @@ static BOOL VerifyOneBuffer(AudioBuffer *buffer, OOUInteger numFrames, float *ba
 		float val = floatBuffer[i];
 		BOOL abnormal = isnan(val) || !isfinite(val);
 		
-		if (abnormal || (fabsf(val) > kOOAudioSlop))
+		if (abnormal || (fabs(val) > kOOAudioSlop))
 		{
-			if (abnormal || (!abnormal && !worstAbnormal && fabsf(*badVal < fabsf(val))))
+			if (abnormal || (!abnormal && !worstAbnormal && fabs(*badVal < fabs(val))))
 			{
 				worstAbnormal = abnormal;
 				*badVal = val;

@@ -28,9 +28,16 @@ MA 02110-1301, USA.
 
 @class OODrawable;
 
+// Methods that must be supported by subentities, regardless of type.
+@protocol OOSubEntity
+
+- (void) rescaleBy:(GLfloat)factor;
+
+@end
 
 @interface OOEntityWithDrawable: Entity
 {
+@private
 	OODrawable				*drawable;
 }
 

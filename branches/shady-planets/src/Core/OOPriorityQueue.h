@@ -43,6 +43,7 @@ SOFTWARE.
 
 @interface OOPriorityQueue: NSObject <NSCopying>
 {
+@private
 	SEL						_comparator;
 	id						*_heap;
 	OOUInteger				_count,
@@ -50,7 +51,7 @@ SOFTWARE.
 }
 
 // Note: -init is equivalent to -initWithComparator:@selector(compare:)
-+ (id) queueWithComparator:(SEL)comparator;
++ (instancetype) queueWithComparator:(SEL)comparator;
 - (id) initWithComparator:(SEL)comparator;
 
 - (void) addObject:(id)object;			// May throw NSInvalidArgumentException or NSMallocException.

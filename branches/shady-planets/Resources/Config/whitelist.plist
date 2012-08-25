@@ -77,7 +77,6 @@
 		"debugMessage:",
 		"playSound:",
 		"setGuiToMissionScreen",
-	//	"setBackgroundFromDescriptionsKey:",	// Is this ever used from a script? It seems a bad match for future plans of mine. -- Ahruman
 		"setGalacticHyperspaceBehaviourTo:",
 		"setGalacticHyperspaceFixedCoordsTo:",
 	);
@@ -110,6 +109,8 @@
 		"performCollect",
 		"performIntercept",
 		"performFlee",
+		"performScriptedAI",
+		"performScriptedAttackAI",
 		"getWitchspaceEntryCoordinates",
 		"setDestinationFromCoordinates",
 		"setCoordinatesFromPosition",
@@ -197,19 +198,20 @@
 		"dropMessages:",
 		"exitAIWithMessage:",
 		"ai_throwSparks",			// Don't use, use throwSparks instead
-		"explodeSelf",			// Don't use, use becomeExplosion instead
+		"explodeSelf",				// Don't use, use becomeExplosion instead
 		"checkAegis",
 		"checkEnergy",
 		"checkHeatInsulation",
 		"setThrustFactorTo:",
 		"setStateTo:",
 		"debugMessage:",
+		"ai_debugMessage:",			// Don't use, use debugMessage: instead
 		"disengageAutopilot",		// Only useful for player root AI
 		"thargonCheckMother",
 		"addPrimaryAggressorAsDefenseTarget",
 		"addFoundTargetAsDefenseTarget",
-		"findNewDefenseTarget",	
-		"clearDefenseTargets",	
+		"findNewDefenseTarget",
+		"clearDefenseTargets",
 		"storeTarget",
 		"recallStoredTarget",
 		// StationEntity.m/stubs in ShipEntityAI.m
@@ -241,7 +243,8 @@
 		"setTargetToNearestFriendlyStation",
 		"setTargetToSystemStation",
 		"setUpEscorts",
-		"fireMissile"
+		"fireMissile",
+		"removeAllDefenseTargets"	// Don't use, use clearDefenseTargets instead
 	);
 	
 	ai_and_action_methods =
@@ -390,6 +393,10 @@
 		"damage",
 		"weaponRecoveryTime",
 		"laserHeatLevel",
+		"laserHeatLevelAft",
+		"laserHeatLevelForward",
+		"laserHeatLevelPort",
+		"laserHeatLevelStarboard",
 		"hullHeatLevel",
 		"entityPersonality",
 		"entityPersonalityInt",
@@ -427,7 +434,19 @@
 		"dialIdentEngaged",
 		"trumbleCount"
 	);
-	
+
+	shader_visual_effect_binding_methods = 
+	(	
+		"hullHeatLevel", // faked value so that default shader will work
+		// arbitrary values of various types for shader bindings
+		"shaderFloat1",
+		"shaderFloat2",
+		"shaderInt1",
+		"shaderInt2",
+		"shaderVector1",
+		"shaderVector2"
+	);
+
 	action_method_aliases =
 	{
 		"setGuiToStatusScreen" = "doNothing";
@@ -456,5 +475,7 @@
 		"scanForRandomMerchantmen" = "scanForRandomMerchantman";
 		"setUpEscorts" = "doNothing";
 		"becomeExplosion" = "explodeSelf";
+		"clearDefenseTargets" = "removeAllDefenseTargets";
+		"debugMessage:" = "ai_debugMessage:";
 	};
 }

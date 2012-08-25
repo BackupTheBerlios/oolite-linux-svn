@@ -30,17 +30,10 @@
 #import "OOJSPropID.h"
 
 @class	OOColor, StationEntity, WormholeEntity, AI, Octree, OOMesh, OOScript,
-OOJSScript, OORoleSet, OOShipGroup, OOEquipmentType;
-
-#ifdef OO_BRAIN_AI
-@class OOBrain;
-#endif
+OOJSScript, OORoleSet, OOShipGroup, OOEquipmentType, OOWeakSet;
 
 @protocol OOHUDBeaconIcon;
 
-
-#define MIN_DISTANCE_TO_BUOY			750.0f // don't add ships within this distance
-#define MIN_DISTANCE_TO_BUOY2			(MIN_DISTANCE_TO_BUOY * MIN_DISTANCE_TO_BUOY)
 
 #define MAX_TARGETS						24
 #define RAIDER_MAX_CARGO				5
@@ -136,6 +129,7 @@ OOJSScript, OORoleSet, OOShipGroup, OOEquipmentType;
 #define COMBAT_AI_FLEES_BETTER_2 9.0f
 
 
+
 #define MAX_LANDING_SPEED				50.0
 #define MAX_LANDING_SPEED2				(MAX_LANDING_SPEED * MAX_LANDING_SPEED)
 
@@ -187,15 +181,6 @@ typedef enum
 } OOShipDamageType;
 
 
-// Methods that must be supported by subentities, regardless of type.
-@protocol OOSubEntity
-
-- (void) rescaleBy:(GLfloat)factor;
-
-@end
-
-
-
 @interface ShipEntity: OOEntityWithDrawable <OOSubEntity>
 {
 @public
@@ -205,15 +190,15 @@ typedef enum
 	// navigation
 	Vector					v_forward, v_up, v_right;	// unit vectors derived from the direction faced
 	
-	// variables which are controlled by instincts/AI
+	// variables which are controlled by AI
 	Vector					destination;				// for flying to/from a set point
-	OOUniversalID			primaryTarget;				// for combat or rendezvous
+
 	GLfloat					desired_range;				// range to which to journey/scan
 	GLfloat					desired_speed;				// speed at which to travel
-// next three used to set desired attitude, flightRoll etc. gradually catch up to target
-	GLfloat         stick_roll;           // stick roll
-	GLfloat         stick_pitch;          // stick pitch
-	GLfloat         stick_yaw;            // stick yaw
+	// next three used to set desired attitude, flightRoll etc. gradually catch up to target
+	GLfloat					stick_roll;					// stick roll
+	GLfloat					stick_pitch;				// stick pitch
+	GLfloat					stick_yaw;					// stick yaw
 	OOBehaviour				behaviour;					// ship's behavioural state
 	
 	BoundingBox				totalBoundingBox;			// records ship configuration
@@ -229,8 +214,6 @@ typedef enum
 	
 	//docking instructions
 	NSDictionary			*dockingInstructions;
-	
-	OOUniversalID			last_escort_target;			// last target an escort was deployed after
 	
 	OOColor					*laser_color;
 	OOColor					*scanner_display_color1;
@@ -248,40 +231,37 @@ typedef enum
 	GLfloat					thrust;						// acceleration
 	float					hyperspaceMotorSpinTime;	// duration of hyperspace countdown
 	
-	// TODO: stick all equipment in a list, and move list from playerEntity to shipEntity. -- Ahruman
 	unsigned				military_jammer_active: 1,	// military_jammer
 	
-docking_match_rotation: 1,
+							docking_match_rotation: 1,
 	
+							pitching_over: 1,			// set to YES if executing a sharp loop
+							rolling_over: 1,			// set to YES if executing a sharp roll
+							reportAIMessages: 1,		// normally NO, suppressing AI message reporting
 	
-pitching_over: 1,			// set to YES if executing a sharp loop
-rolling_over: 1,			// set to YES if executing a sharp roll
-reportAIMessages: 1,		// normally NO, suppressing AI message reporting
+							being_mined: 1,				// normally NO, set to Yes when fired on by mining laser
 	
-being_mined: 1,				// normally NO, set to Yes when fired on by mining laser
+							being_fined: 1,
 	
-being_fined: 1,
-	
-isHulk: 1,					// This is used to distinguish abandoned ships from cargo
-trackCloseContacts: 1,
-	
-isNearPlanetSurface: 1,		// check for landing on planet
-isFrangible: 1,				// frangible => subEntities can be damaged individually
-cloaking_device_active: 1,	// cloaking_device
-cloakPassive: 1,			// cloak deactivates when main weapons or missiles are fired
-cloakAutomatic: 1,			// cloak activates itself automatic during attack
-canFragment: 1,				// Can it break into wreckage?
-suppressExplosion: 1,		// Avoid exploding on death (script hook)
-suppressAegisMessages: 1,	// No script/AI messages sent by -checkForAegis,
-isMissile: 1,				// Whether this was launched by fireMissile (used to track submunitions).
-isUnpiloted: 1,				// Is meant to not have crew
-hasScoopMessage: 1,			// suppress scoop messages when false.
-	
-	// scripting
-scripted_misjump: 1,
-haveExecutedSpawnAction: 1,
-noRocks: 1,
-_lightsActive: 1;
+							isHulk: 1,					// This is used to distinguish abandoned ships from cargo
+							trackCloseContacts: 1,
+							isNearPlanetSurface: 1,		// check for landing on planet
+							isFrangible: 1,				// frangible => subEntities can be damaged individually
+							cloaking_device_active: 1,	// cloaking_device
+							cloakPassive: 1,			// cloak deactivates when main weapons or missiles are fired
+							cloakAutomatic: 1,			// cloak activates itself automatic during attack
+							canFragment: 1,				// Can it break into wreckage?
+							suppressExplosion: 1,		// Avoid exploding on death (script hook)
+							suppressAegisMessages: 1,	// No script/AI messages sent by -checkForAegis,
+							isMissile: 1,				// Whether this was launched by fireMissile (used to track submunitions).
+							isUnpiloted: 1,				// Is meant to not have crew
+							hasScoopMessage: 1,			// suppress scoop messages when false.
+							
+							// scripting
+							scripted_misjump: 1,
+							haveExecutedSpawnAction: 1,
+							noRocks: 1,
+							_lightsActive: 1;
 	
 	OOFuelQuantity			fuel;						// witch-space fuel
 	GLfloat					fuel_accumulator;
@@ -296,7 +276,7 @@ _lightsActive: 1;
 	
 	GLfloat					energy_recharge_rate;		// recharge rate for energy banks
 	
-	int weapon_facings; // weapon mounts available (bitmask)
+	int						weapon_facings;				// weapon mounts available (bitmask)
 	OOWeaponType			forward_weapon_type;		// type of forward weapon (allows lasers, plasma cannon, others)
 	OOWeaponType			aft_weapon_type;			// type of aft weapon (allows lasers, plasma cannon, others)
 	OOWeaponType			port_weapon_type;			// type of port weapon
@@ -304,6 +284,7 @@ _lightsActive: 1;
 	GLfloat					weapon_damage;				// energy damage dealt by weapon
 	GLfloat					weapon_damage_override;		// custom energy damage dealt by front laser, if applicable
 	GLfloat					weaponRange;				// range of the weapon (in meters)
+	OOViewID				currentWeaponFacing;	// not necessarily the same as view for the player
 	
 	GLfloat					weapon_temp, weapon_shot_temperature; // active weapon temp, delta-temp
 	GLfloat					forward_weapon_temp, aft_weapon_temp, port_weapon_temp, starboard_weapon_temp; // current weapon temperatures
@@ -316,9 +297,6 @@ _lightsActive: 1;
 	OOTimeDelta				missile_load_time;			// minimum time interval between missile launches
 	OOTimeAbsolute			missile_launch_time;		// time of last missile launch
 	
-#ifdef OO_BRAIN_AI
-	OOBrain					*brain;						// brain controlling ship, could be a character brain or the autopilot
-#endif
 	AI						*shipAI;					// ship's AI system
 	
 	NSString				*name;						// descriptive name
@@ -330,10 +308,6 @@ _lightsActive: 1;
 	Vector					jink;						// x and y set factors for offsetting a pursuing ship's position
 	Vector					coordinates;				// for flying to/from a set point
 	Vector					reference;					// a direction vector of magnitude 1 (* turrets *)
-	OOUniversalID			primaryAggressor;			// recorded after an attack
-	OOUniversalID			targetStation;				// for docking
-	OOUniversalID			found_target;				// from scans
-	NSMutableArray			*defenseTargets;			 // defense targets
 	
 	OOUInteger				_subIdx;					// serialisation index - used only if this ship is a subentity
 	OOUInteger				_maxShipSubIdx;				// serialisation index - the number of ship subentities inside the shipdata
@@ -346,7 +320,6 @@ _lightsActive: 1;
 	
 	int						patrol_counter;				// keeps track of where the ship is along a patrol route
 	
-	OOUniversalID			proximity_alert;			// id of a ShipEntity within 2x collision_radius
 	NSMutableDictionary		*previousCondition;			// restored after collision avoidance
 	
 	// derived variables
@@ -366,9 +339,10 @@ _lightsActive: 1;
 	GLfloat					flightPitch;				// current pitch rate
 	GLfloat					flightYaw;					// current yaw rate
 	
-	float					accuracy;
-	float					pitch_tolerance;
-	float					aim_tolerance;
+	GLfloat					accuracy;
+	GLfloat					pitch_tolerance;
+	GLfloat					aim_tolerance;
+	int					_missed_shots;
 	
 	OOAegisStatus			aegis_status;				// set to YES when within the station's protective zone
 	
@@ -377,16 +351,13 @@ _lightsActive: 1;
 	
 	double					next_spark_time;			// time of next spark when throwing sparks
 	
-	OOUniversalID			thanked_ship_id;			// last ship thanked
-	OOUniversalID			remembered_ship;			// ship being remembered
-	
 	Vector					collision_vector;			// direction of colliding thing.
 	
 	//position of gun ports
 	Vector					forwardWeaponOffset,
-	aftWeaponOffset,
-	portWeaponOffset,
-	starboardWeaponOffset;
+							aftWeaponOffset,
+							portWeaponOffset,
+							starboardWeaponOffset;
 	
 	// crew (typically one OOCharacter - the pilot)
 	NSArray					*crew;
@@ -403,7 +374,7 @@ _lightsActive: 1;
 	float					ship_temperature;
 	
 	// for advanced scanning etc.
-	ShipEntity*				scanned_ships[MAX_SCAN_NUMBER + 1];
+	ShipEntity				*scanned_ships[MAX_SCAN_NUMBER + 1];
 	GLfloat					distance2_scanned_ships[MAX_SCAN_NUMBER + 1];
 	unsigned				n_scanned_ships;
 	
@@ -425,10 +396,23 @@ _lightsActive: 1;
 	
 	NSMutableArray			*subEntities;
 	OOEquipmentType			*missile_list[SHIPENTITY_MAX_MISSILES];
+
+	// various types of target
+	OOWeakReference	*_primaryTarget;				// for combat or rendezvous
+	OOWeakReference	*_primaryAggressor;				// recorded after attack
+  OOWeakReference *_targetStation; // for docking
+	OOWeakReference	*_foundTarget;				// from scans
+	OOWeakReference	*_lastEscortTarget;			// last target an escort was deployed after
+	OOWeakReference	*_thankedShip;			// last ship thanked
+	OOWeakReference	*_rememberedShip;			// ship being remembered
+	OOWeakReference	*_proximityAlert;			// a ShipEntity within 2x collision_radius
+	
+	
+
 	
 @private
 	OOWeakReference			*_subEntityTakingDamage;	//	frangible => subEntities can be damaged individually
-	
+
 	NSString				*_shipKey;
 	
 	NSMutableSet			*_equipment;
@@ -443,6 +427,8 @@ _lightsActive: 1;
 	// Cache of ship-relative positions, managed by -coordinatesForEscortPosition:.
 	Vector					_escortPositions[MAX_ESCORTS];
 	BOOL					_escortPositionsValid;
+	
+	OOWeakSet				*_defenseTargets;			 // defense targets
 	
 	GLfloat					_profileRadius;
 	
@@ -467,11 +453,6 @@ _lightsActive: 1;
 - (void) setLaunchDelay:(double)delay;
 
 - (void) interpretAIMessage:(NSString *)message;
-
-#ifdef OO_BRAIN_AI
-- (OOBrain *)brain;
-- (void)setBrain:(OOBrain*) aBrain;
-#endif
 
 - (GLfloat)accuracy;
 - (void)setAccuracy:(GLfloat) new_accuracy;
@@ -540,6 +521,7 @@ _lightsActive: 1;
 - (BOOL)setUpFromDictionary:(NSDictionary *) shipDict;
 - (BOOL)setUpShipFromDictionary:(NSDictionary *) shipDict;
 - (BOOL)setUpSubEntities;
+- (BOOL) setUpOneStandardSubentity:(NSDictionary *) subentDict asTurret:(BOOL)asTurret;
 - (GLfloat)frustumRadius;
 
 - (NSString *) shipDataKey;
@@ -549,6 +531,10 @@ _lightsActive: 1;
 - (NSDictionary *)shipInfoDictionary;
 
 - (void) setDefaultWeaponOffsets;
+- (Vector) aftWeaponOffset;
+- (Vector) forwardWeaponOffset;
+- (Vector) portWeaponOffset;
+- (Vector) starboardWeaponOffset;
 
 - (BOOL) isFrangible;
 - (BOOL) suppressFlightNotifications;
@@ -650,6 +636,7 @@ _lightsActive: 1;
 - (void) behaviour_avoid_collision:(double) delta_t;
 - (void) behaviour_track_as_turret:(double) delta_t;
 - (void) behaviour_fly_thru_navpoints:(double) delta_t;
+- (void) behaviour_scripted_ai:(double) delta_t;
 
 - (GLfloat *) scannerDisplayColorForShip:(ShipEntity*)otherShip :(BOOL)isHostile :(BOOL)flash :(OOColor *)scannerDisplayColor1 :(OOColor *)scannerDisplayColor2;
 - (void)setScannerDisplayColor1:(OOColor *)color1;
@@ -691,9 +678,6 @@ _lightsActive: 1;
 - (uint8_t) pendingEscortCount;
 - (void) setPendingEscortCount:(uint8_t)count;
 
-- (ShipEntity *) proximity_alert;
-- (void) setProximity_alert:(ShipEntity*) other;
-
 - (NSString *) name;
 - (NSString *) displayName;
 - (void) setName:(NSString *)inName;
@@ -727,13 +711,13 @@ _lightsActive: 1;
 - (BOOL) isHostileTo:(Entity *)entity;
 
 // defense target handling
-- (unsigned) numDefenseTargets;
-- (Entity*) getDefenseTarget:(int)index;
-- (BOOL) addDefenseTarget:(Entity*)target;
-- (BOOL) isDefenseTarget:(Entity*)target;
-- (void) removeDefenseTarget:(unsigned)index;
-- (void) removeDefenseTargetByID:(Entity*)target;
-- (void) clearDefenseTargets;
+- (OOUInteger) defenseTargetCount;
+- (NSArray *) allDefenseTargets;
+- (NSEnumerator *) defenseTargetEnumerator;
+- (BOOL) addDefenseTarget:(Entity *)target;
+- (BOOL) isDefenseTarget:(Entity *)target;
+- (void) removeDefenseTarget:(Entity *)target;
+- (void) removeAllDefenseTargets;
 
 
 - (GLfloat) weaponRange;
@@ -742,15 +726,16 @@ _lightsActive: 1;
 - (float) weaponRechargeRate;
 - (void) setWeaponRechargeRate:(float)value;
 - (void) setWeaponEnergy:(float)value;
+-	(OOViewID) currentWeaponFacing;
 
 - (GLfloat) scannerRange;
-- (void) setScannerRange: (GLfloat) value;
+- (void) setScannerRange:(GLfloat)value;
 
 - (Vector) reference;
-- (void) setReference:(Vector) v;
+- (void) setReference:(Vector)v;
 
 - (BOOL) reportAIMessages;
-- (void) setReportAIMessages:(BOOL) yn;
+- (void) setReportAIMessages:(BOOL)yn;
 
 - (void) transitionToAegisNone;
 - (OOPlanetEntity *) findNearestPlanet;
@@ -760,18 +745,18 @@ _lightsActive: 1;
 - (BOOL) withinStationAegis;
 
 - (NSArray*) crew;
-- (void) setCrew: (NSArray*) crewArray;
+- (void) setCrew:(NSArray *)crewArray;
 
 // Fuel and capacity in tenths of light-years.
 - (OOFuelQuantity) fuel;
-- (void) setFuel:(OOFuelQuantity) amount;
+- (void) setFuel:(OOFuelQuantity)amount;
 - (OOFuelQuantity) fuelCapacity;
 
 - (GLfloat) fuelChargeRate;
 
-- (void) setRoll:(double) amount;
-- (void) setPitch:(double) amount;
-- (void) setThrust:(double) amount;
+- (void) setRoll:(double)amount;
+- (void) setPitch:(double)amount;
+- (void) setThrust:(double)amount;
 - (void) applySticks:(double)delta_t;
 
 
@@ -781,14 +766,14 @@ _lightsActive: 1;
  Sets the bounty on this ship to amount.  
  Does not check to see if the ship is allowed to have a bounty, for example if it is police.
  */
-- (void) setBounty:(OOCreditsQuantity) amount;
-- (void) setBounty:(OOCreditsQuantity) amount withReason:(OOLegalStatusReason)reason;
-- (void) setBounty:(OOCreditsQuantity) amount withReasonAsString:(NSString *)reason;
+- (void) setBounty:(OOCreditsQuantity)amount;
+- (void) setBounty:(OOCreditsQuantity)amount withReason:(OOLegalStatusReason)reason;
+- (void) setBounty:(OOCreditsQuantity)amount withReasonAsString:(NSString *)reason;
 - (OOCreditsQuantity) bounty;
 
 - (int) legalStatus;
 
-- (void) setUpCargoType:(NSString *) cargoString;
+- (void) setUpCargoType:(NSString *)cargoString;
 - (void) setCommodity:(OOCommodityType)co_type andAmount:(OOCargoQuantity)co_amount;
 - (void) setCommodityForPod:(OOCommodityType)co_type andAmount:(OOCargoQuantity)co_amount;
 - (OOCommodityType) commodityType;
@@ -799,41 +784,46 @@ _lightsActive: 1;
 - (OOCargoQuantity) cargoQuantityOnBoard;
 - (OOCargoType) cargoType;
 - (NSMutableArray *) cargo;
-- (void) setCargo:(NSArray *) some_cargo;
+- (void) setCargo:(NSArray *)some_cargo;
 - (BOOL) showScoopMessage;
 
 - (NSArray *) passengerListForScripting;
 - (NSArray *) contractListForScripting;
 - (NSArray *) equipmentListForScripting;
-- (OOEquipmentType *) weaponTypeForFacing:(int) facing;
+- (OOEquipmentType *) weaponTypeForFacing:(int)facing;
 - (NSArray *) missilesList;
 
 - (OOCargoFlag) cargoFlag;
-- (void) setCargoFlag:(OOCargoFlag) flag;
+- (void) setCargoFlag:(OOCargoFlag)flag;
 
-- (void) setSpeed:(double) amount;
+- (void) setSpeed:(double)amount;
 - (double) desiredSpeed;
-- (void) setDesiredSpeed:(double) amount;
+- (void) setDesiredSpeed:(double)amount;
+- (double) desiredRange;
+- (void) setDesiredRange:(double)amount;
 
 - (double) cruiseSpeed;
 
 - (Vector) thrustVector;
 - (void) setTotalVelocity:(Vector)vel;	// Set velocity to vel - thrustVector, effectively setting the instanteneous velocity to vel.
 
-- (void) increase_flight_speed:(double) delta;
-- (void) decrease_flight_speed:(double) delta;
-- (void) increase_flight_roll:(double) delta;
-- (void) decrease_flight_roll:(double) delta;
-- (void) increase_flight_pitch:(double) delta;
-- (void) decrease_flight_pitch:(double) delta;
-- (void) increase_flight_yaw:(double) delta;
-- (void) decrease_flight_yaw:(double) delta;
+- (void) increase_flight_speed:(double)delta;
+- (void) decrease_flight_speed:(double)delta;
+- (void) increase_flight_roll:(double)delta;
+- (void) decrease_flight_roll:(double)delta;
+- (void) increase_flight_pitch:(double)delta;
+- (void) decrease_flight_pitch:(double)delta;
+- (void) increase_flight_yaw:(double)delta;
+- (void) decrease_flight_yaw:(double)delta;
 
 - (GLfloat) flightRoll;
 - (GLfloat) flightPitch;
 - (GLfloat) flightYaw;
 - (GLfloat) flightSpeed;
+- (GLfloat) maxFlightPitch;
 - (GLfloat) maxFlightSpeed;
+- (GLfloat) maxFlightRoll;
+- (GLfloat) maxFlightYaw;
 - (GLfloat) speedFactor;
 
 - (GLfloat) temperature;
@@ -875,6 +865,10 @@ Vector positionOffsetForShipInRotationToAlignment(ShipEntity* ship, Quaternion q
 
 - (GLfloat)weaponRecoveryTime;
 - (GLfloat)laserHeatLevel;
+- (GLfloat)laserHeatLevelAft;
+- (GLfloat)laserHeatLevelForward;
+- (GLfloat)laserHeatLevelPort;
+- (GLfloat)laserHeatLevelStarboard;
 - (GLfloat)hullHeatLevel;
 - (GLfloat)entityPersonality;
 - (GLint)entityPersonalityInt;
@@ -894,13 +888,24 @@ Vector positionOffsetForShipInRotationToAlignment(ShipEntity* ship, Quaternion q
 - (ShipEntity**) scannedShips;
 - (int) numberOfScannedShips;
 
-- (void) setFound_target:(Entity *) targetEntity;
+- (Entity *)foundTarget;
+- (Entity *)primaryAggressor;
+- (Entity *)lastEscortTarget;
+- (Entity *)thankedShip;
+- (Entity *)rememberedShip;
+- (Entity *)proximityAlert;
+- (void) setFoundTarget:(Entity *) targetEntity;
 - (void) setPrimaryAggressor:(Entity *) targetEntity;
+- (void) setLastEscortTarget:(Entity *) targetEntity;
+- (void) setThankedShip:(Entity *) targetEntity;
+- (void) setRememberedShip:(Entity *) targetEntity;
+- (void) setProximityAlert:(ShipEntity *) targetEntity;
 - (void) setTargetStation:(Entity *) targetEntity;
+- (BOOL) isValidTarget:(Entity *) target;
 - (void) addTarget:(Entity *) targetEntity;
 - (void) removeTarget:(Entity *) targetEntity;
 - (id) primaryTarget;
-- (OOUniversalID) primaryTargetID;
+- (StationEntity *) targetStation;
 
 - (BOOL) isFriendlyTo:(ShipEntity *)otherShip;
 
@@ -939,6 +944,8 @@ Vector positionOffsetForShipInRotationToAlignment(ShipEntity* ship, Quaternion q
 - (double) rangeToPrimaryTarget;
 - (double) approachAspectToPrimaryTarget;
 - (double) rangeToSecondaryTarget:(Entity *)target;
+- (BOOL) hasProximityAlertIgnoringTarget:(BOOL)ignore_target;
+- (GLfloat) currentAimTolerance;
 - (BOOL) onTarget:(OOViewID) direction withWeapon:(OOWeaponType)weapon;
 
 - (OOTimeDelta) shotTime;
@@ -956,6 +963,8 @@ Vector positionOffsetForShipInRotationToAlignment(ShipEntity* ship, Quaternion q
 - (BOOL) fireDirectLaserDefensiveShot;
 - (BOOL) fireDirectLaserShotAt:(Entity*)my_target;
 - (BOOL) fireLaserShotInDirection:(OOViewID)direction;
+- (void) adjustMissedShots:(int)delta;
+- (int) missedShots;
 - (BOOL) firePlasmaShotAtOffset:(double)offset speed:(double)speed color:(OOColor *)color;
 - (void) considerFiringMissile:(double)delta_t;
 - (ShipEntity *) fireMissile;
@@ -970,7 +979,7 @@ Vector positionOffsetForShipInRotationToAlignment(ShipEntity* ship, Quaternion q
 - (BOOL) activateCloakingDevice;
 - (void) deactivateCloakingDevice;
 - (BOOL) launchCascadeMine;
-- (OOUniversalID) launchEscapeCapsule;
+- (ShipEntity *) launchEscapeCapsule;
 - (OOCommodityType) dumpCargo;
 - (ShipEntity *) dumpCargoItem;
 - (OOCargoType) dumpItem: (ShipEntity*) jetto;
@@ -1061,8 +1070,9 @@ Vector positionOffsetForShipInRotationToAlignment(ShipEntity* ship, Quaternion q
 - (void) pilotArrived;
 #endif
 
-- (OOJSScript *)script;
-- (NSDictionary *)scriptInfo;
+- (OOJSScript *) script;
+- (NSDictionary *) scriptInfo;
+- (void) overrideScriptInfo:(NSDictionary *)override;	// Add items from override (if not nil) to scriptInfo, replacing in case of duplicates. Used for subentities.
 
 - (BOOL) scriptedMisjump;
 - (void) setScriptedMisjump:(BOOL)newValue;

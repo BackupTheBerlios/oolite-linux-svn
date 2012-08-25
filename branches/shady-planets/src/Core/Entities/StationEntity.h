@@ -26,7 +26,9 @@ MA 02110-1301, USA.
 
 #import "ShipEntity.h"
 #import "Universe.h"
-#import "legacy_random.h"
+
+@class OOWeakSet;
+
 
 typedef enum
 {
@@ -45,17 +47,15 @@ typedef enum
 
 #define DOCKING_CLEARANCE_WINDOW		126.0
 
+
 @interface StationEntity: ShipEntity
 {
-	
-	NSMutableDictionary		*shipsOnApproach;
-	NSMutableDictionary		*shipsOnHold;
-	NSMutableArray			*launchQueue;
+@private
+	OOWeakSet				*_shipsOnHold;
+	DockEntity				*player_reserved_dock;
 	double					last_launch_time;
 	double					approach_spacing;
 	OOStationAlertLevel		alertLevel;
-	
-	ShipEntity				*id_lock[MAX_DOCKING_STAGES];	// OOWeakReferences to a ShipEntity
 	
 	unsigned				max_police;					// max no. of police ships allowed
 	unsigned				max_defense_ships;			// max no. of defense ships allowed
@@ -67,11 +67,12 @@ typedef enum
 	OOTechLevelID			equivalentTechLevel;
 	float					equipmentPriceFactor;
 
-	Vector					port_position;
+/*	Vector					port_position; // these four now handled by DockEntity
 	Quaternion				port_orientation;
-	Vector  				port_dimensions;
 	ShipEntity				*port_model;
-	double					port_corridor;				// corridor length inside station.
+	double					port_corridor; */				// corridor length inside station.
+	Vector  				port_dimensions;
+	double					port_radius;
 	
 	unsigned				no_docking_while_launching: 1,
 							hasNPCTraffic: 1;
@@ -99,53 +100,50 @@ typedef enum
 							requiresDockingClearance: 1,
 							interstellarUndockingAllowed: 1,
 							allowsFastDocking: 1,
-							allowsAutoDocking: 1;
+							allowsAutoDocking: 1,
+							hasBreakPattern: 1;
 }
 
-- (void) setDockingPortModel:(ShipEntity*) dock_model :(Vector) dock_pos :(Quaternion) dock_q;
-
 - (NSMutableArray *) localMarket;
-- (void) setLocalMarket:(NSArray *) some_market;
+- (void) setLocalMarket:(NSArray *)market;
 - (NSMutableArray *) localPassengers;
-- (void) setLocalPassengers:(NSArray *) some_market;
+- (void) setLocalPassengers:(NSArray *)market;
 - (NSMutableArray *) localContracts;
-- (void) setLocalContracts:(NSArray *) some_market;
+- (void) setLocalContracts:(NSArray *)market;
 - (NSMutableArray *) localShipyard;
-- (void) setLocalShipyard:(NSArray *) some_market;
+- (void) setLocalShipyard:(NSArray *)market;
 
-- (NSMutableArray *) initialiseLocalMarketWithRandomFactor:(int) random_factor;
-- (NSMutableArray *) initialiseMarketWithSeed:(Random_Seed) s_seed andRandomFactor:(int) random_factor;
+- (NSMutableArray *) initialiseLocalMarketWithRandomFactor:(int)random_factor;
+- (NSMutableArray *) initialiseMarketWithSeed:(Random_Seed)seed andRandomFactor:(int)random_factor;
 
 - (OOTechLevelID) equivalentTechLevel;
-- (void) setEquivalentTechLevel:(OOTechLevelID) value;
+- (void) setEquivalentTechLevel:(OOTechLevelID)value;
 
-- (double) port_radius;
+- (NSEnumerator *) dockSubEntityEnumerator;
+- (Vector) virtualPortDimensions;
+- (DockEntity*) playerReservedDock;
 
-- (Vector) getPortPosition;
-
-- (Vector) getBeaconPosition;
+- (Vector) beaconPosition;
 
 - (float) equipmentPriceFactor;
 
-- (void) setPlanet:(OOPlanetEntity *)planet_entity;
+- (void) setPlanet:(OOPlanetEntity *)planet;
 
 - (OOPlanetEntity *) planet;
 
-- (unsigned) dockedContractors;
-- (unsigned) dockedPolice;
-- (unsigned) dockedDefenders;
+- (unsigned) countOfDockedContractors;
+- (unsigned) countOfDockedPolice;
+- (unsigned) countOfDockedDefenders;
 
 - (void) sanityCheckShipsOnApproach;
 
 - (void) autoDockShipsOnApproach;
 
-- (NSDictionary *) dockingInstructionsForShip:(ShipEntity *) ship;
-- (void) addShipToShipsOnApproach:(ShipEntity *) ship;
+- (Vector) portUpVectorForShip:(ShipEntity *)ship;
 
-- (Vector) portUpVector;
-- (Vector) portUpVectorForShipsBoundingBox:(BoundingBox) bb;
+- (NSDictionary *) dockingInstructionsForShip:(ShipEntity *)ship;
 
-- (BOOL) shipIsInDockingCorridor:(ShipEntity*) ship;
+- (BOOL) shipIsInDockingCorridor:(ShipEntity *)ship;
 
 - (BOOL) dockingCorridorIsEmpty;
 
@@ -156,20 +154,22 @@ typedef enum
 
 - (void) abortAllDockings;
 
-- (void) abortDockingForShip:(ShipEntity *) ship;
+- (void) abortDockingForShip:(ShipEntity *)ship;
 
-- (void) addShipToLaunchQueue:(ShipEntity *) ship :(BOOL) priority;
+- (BOOL) hasMultipleDocks;
+- (BOOL) hasClearDock;
+- (BOOL) hasLaunchDock;
+- (DockEntity *) selectDockForDocking;
+- (unsigned) currentlyInLaunchingQueues;
+- (unsigned) currentlyInDockingQueues;
 
-- (unsigned) countShipsInLaunchQueueWithPrimaryRole:(NSString *)role;
 
-- (void) launchShip:(ShipEntity *) ship;
+- (void) launchShip:(ShipEntity *)ship;
 
-- (BOOL) fitsInDock:(ShipEntity *) ship;
+- (ShipEntity *) launchIndependentShip:(NSString *)role;
 
-- (ShipEntity *) launchIndependentShip:(NSString*) role;
+- (void) noteDockedShip:(ShipEntity *)ship;
 
-- (void) noteDockedShip:(ShipEntity *) ship;
-- (void) addShipToStationCount:(ShipEntity *) ship;
 - (BOOL) interstellarUndockingAllowed;
 - (BOOL) hasNPCTraffic;
 - (void) setHasNPCTraffic:(BOOL)flag;
@@ -192,9 +192,9 @@ typedef enum
 - (void) launchEscort;
 - (ShipEntity *) launchPatrol;
 
-- (void) launchShipWithRole:(NSString*) role;
+- (void) launchShipWithRole:(NSString *)role;
 
-- (void) acceptPatrolReportFrom:(ShipEntity*) patrol_ship;
+- (void) acceptPatrolReportFrom:(ShipEntity *)patrol_ship;
 
 - (NSString *) acceptDockingClearanceRequestFrom:(ShipEntity *)other;
 - (BOOL) requiresDockingClearance;
@@ -213,4 +213,12 @@ typedef enum
 - (BOOL) suppressArrivalReports;
 - (void) setSuppressArrivalReports:(BOOL)newValue;
 
+- (BOOL) hasBreakPattern;
+- (void) setHasBreakPattern:(BOOL)newValue;
+
+
 @end
+
+
+
+NSDictionary *OOMakeDockingInstructions(StationEntity *station, Vector coords, float speed, float range, NSString *ai_message, NSString *comms_message, BOOL match_rotation);

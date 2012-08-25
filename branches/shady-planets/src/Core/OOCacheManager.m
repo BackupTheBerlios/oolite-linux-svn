@@ -74,7 +74,7 @@ static NSString * const kCacheKeyCaches						= @"caches";
 enum
 {
 	kEndianTagValue			= 0x0123456789ABCDEFULL,
-	kFormatVersionValue		= 201
+	kFormatVersionValue		= 203
 };
 
 
@@ -148,7 +148,7 @@ static OOCacheManager *sSingleton = nil;
 }
 
 
-+ (id)sharedCache
++ (OOCacheManager *) sharedCache
 {
 	// NOTE: assumes single-threaded access.
 	if (sSingleton == nil)
@@ -182,7 +182,7 @@ static OOCacheManager *sSingleton = nil;
 	}
 	else
 	{
-		OODebugLog(kOOLogDataCacheRetrieveFailed, @"Failed to retreive\"%@\" cache object %@ -- no such cache.", inCacheKey, inKey);
+		OODebugLog(kOOLogDataCacheRetrieveFailed, @"Failed to retreive \"%@\" cache object %@ -- no such cache.", inCacheKey, inKey);
 	}
 	
 	return result;

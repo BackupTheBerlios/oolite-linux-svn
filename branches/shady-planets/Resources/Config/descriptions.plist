@@ -400,7 +400,7 @@
 			"karate",
 			"polo",
 			"tennis"
-		),
+		)
 	);
 	
 	// *** Planet names and other random names ***
@@ -704,12 +704,33 @@
 		"Negative. Your ship cannot dock here.",
 		"Docking clearance denied."
 	);
+	"station-docking-clearance-denied-no-docks" =
+	(
+		"Docking clearance refused to all vessels.",
+		"Docking is not allowed at this station.",
+		"Negative. Your ship cannot dock here.",
+		"Docking clearance denied."
+	);
+	"station-docking-clearance-denied-no-docks-yet" =
+	(
+		"Docking clearance is refused at this time.",
+		"Docking bays are closed. Please come back later.",
+		"We do not have any docks open at this time.",
+		"Docking clearance denied."
+	);
 	"station-docking-clearance-granted-until-@" =
 	(
 		"You are cleared to dock. Please proceed. Clearance expires at %@",
 		"You have docking clearance, Commander. Your window is up to %@",
 		"Docking authorized. You have an approach slot terminating at %@",
 		"Permission granted. Proceed for docking approach. Slot valid until %@"
+	);
+	"station-docking-clearance-granted-in-@-until-@" =
+	(
+		"You are cleared to dock in %@. Please proceed. Clearance expires at %@",
+		"You have docking clearance for %@, Commander. Your window is up to %@",
+		"Docking authorized for %@. You have an approach slot terminating at %@",
+		"Permission granted. Proceed for docking approach to %@. Slot valid until %@"
 	);
 	"station-docking-clearance-extended-until-@" =
 	(
@@ -985,6 +1006,14 @@
 	
 	// Long Range Chart Screen
 	"long-range-chart-title-d"		= "Galactic Chart %d";
+	"long-range-chart-title-0"		= "Galactic Chart 1";
+	"long-range-chart-title-1"		= "Galactic Chart 2";
+	"long-range-chart-title-2"		= "Galactic Chart 3";
+	"long-range-chart-title-3"		= "Galactic Chart 4";
+	"long-range-chart-title-4"		= "Galactic Chart 5";
+	"long-range-chart-title-5"		= "Galactic Chart 6";
+	"long-range-chart-title-6"		= "Galactic Chart 7";
+	"long-range-chart-title-7"		= "Galactic Chart 8";
 	"long-range-chart-distance-f"	= "[charts-distance-f]";
 	"long-range-chart-est-travel-time-f" = "[charts-est-travel-time-f]";
 	"long-range-chart-find-planet-@" = "Find planet: %@";
@@ -1032,7 +1061,6 @@
 	"gameoptions-gamma-value"				= " Gamma: ";
 	"gameoptions-sound-volume-mute"			= " Sound Volume: Mute ";
 	"gameoptions-volume-external-only"		= " Sound Volume: External Control Only ";
-	"gameoptions-show-growl-messages-@"		= " Show Growl Messages: %@ ";
 	"gameoptions-spoken-messages-yes"		= " Spoken Messages: On ";
 	"gameoptions-spoken-messages-no"		= " Spoken Messages: Off ";
 	"gameoptions-voice-@"					= " Voice: %@ ";
@@ -1072,6 +1100,8 @@
 	"stickmapper-weapons-online-toggle"	= "Weapons online toggle";
 	"stickmapper-ECM"				= "ECM";
 	"stickmapper-toggle-ID"			= "Toggle ID";
+	"stickmapper-previous-target"	= "Select previous target";
+	"stickmapper-next-target"		= "Select next target";
 	"stickmapper-fuel-injection"	= "Fuel injection";
 	"stickmapper-hyperspeed"		= "Hyperspeed";
 	"stickmapper-roll/pitch-precision-toggle"	= "Roll/pitch precision toggle";
@@ -1092,17 +1122,6 @@
 		"On",
 		"iTunes"
 	);
-	"growl-priority-levels" =
-	(
-		"On (for all messages)",
-		"On (for low priority messages)",
-		"On (for medium priority messages)",
-		"On (for high priority messages)",
-		"On (for highest priority messages)",
-		"Off (for all messages)"
-	);
-	"growl-not-available"					= "Not available";
-	"growl-disabled"						= "Disabled";
 	
 	// Equip ship screen
 	"equip-title"					= "Ship Outfitting";

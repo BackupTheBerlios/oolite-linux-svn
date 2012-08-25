@@ -78,6 +78,8 @@ enum {
 	BUTTON_ENERGYBOMB,
 	BUTTON_WEAPONSONLINETOGGLE,
 	BUTTON_ID,
+	BUTTON_PREVTARGET,
+	BUTTON_NEXTTARGET,
 	BUTTON_ECM,
 	BUTTON_ESCAPE,
 	BUTTON_CLOAK,
@@ -214,7 +216,7 @@ typedef struct
 
 @interface OOJoystickManager: NSObject 
 {
-@protected
+@private
 	// Axis/button mapping arrays
 	int8_t		axismap[MAX_STICKS][MAX_AXES];
 	int8_t		buttonmap[MAX_STICKS][MAX_BUTTONS];

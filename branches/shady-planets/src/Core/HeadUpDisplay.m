@@ -28,6 +28,7 @@ MA 02110-1301, USA.
 #import "OOSunEntity.h"
 #import "OOPlanetEntity.h"
 #import "StationEntity.h"
+#import "OOVisualEffectEntity.h"
 #import "OOQuiriumCascadeEntity.h"
 #import "Universe.h"
 #import "OOTrumble.h"
@@ -84,46 +85,45 @@ enum
 - (void) drawLegends;
 - (void) drawDials;
 
-- (void) drawLegend:(NSDictionary *) info;
-- (void) drawHUDItem:(NSDictionary *) info;
+- (void) drawLegend:(NSDictionary *)info;
+- (void) drawHUDItem:(NSDictionary *)info;
 
-- (void) drawScanner:(NSDictionary *) info;
-- (void) drawScannerZoomIndicator:(NSDictionary *) info;
+- (void) drawScanner:(NSDictionary *)info;
+- (void) drawScannerZoomIndicator:(NSDictionary *)info;
 
-- (void) drawCompass:(NSDictionary *) info;
+- (void) drawCompass:(NSDictionary *)info;
 - (void) drawCompassPlanetBlipAt:(Vector) relativePosition Size:(NSSize) siz Alpha:(GLfloat) alpha;
 - (void) drawCompassStationBlipAt:(Vector) relativePosition Size:(NSSize) siz Alpha:(GLfloat) alpha;
 - (void) drawCompassSunBlipAt:(Vector) relativePosition Size:(NSSize) siz Alpha:(GLfloat) alpha;
 - (void) drawCompassTargetBlipAt:(Vector) relativePosition Size:(NSSize) siz Alpha:(GLfloat) alpha;
-- (void) drawCompassWitchpointBlipAt:(Vector) relativePosition Size:(NSSize) siz Alpha:(GLfloat) alpha;
 - (void) drawCompassBeaconBlipAt:(Vector) relativePosition Size:(NSSize) siz Alpha:(GLfloat) alpha;
 
-- (void) drawAegis:(NSDictionary *) info;
-- (void) drawSpeedBar:(NSDictionary *) info;
-- (void) drawRollBar:(NSDictionary *) info;
-- (void) drawPitchBar:(NSDictionary *) info;
-- (void) drawYawBar:(NSDictionary *) info;
-- (void) drawEnergyGauge:(NSDictionary *) info;
-- (void) drawForwardShieldBar:(NSDictionary *) info;
-- (void) drawAftShieldBar:(NSDictionary *) info;
-- (void) drawFuelBar:(NSDictionary *) info;
-- (void) drawCabinTempBar:(NSDictionary *) info;
-- (void) drawWeaponTempBar:(NSDictionary *) info;
-- (void) drawAltitudeBar:(NSDictionary *) info;
-- (void) drawMissileDisplay:(NSDictionary *) info;
-- (void) drawTargetReticle:(NSDictionary *) info;
-- (void) drawStatusLight:(NSDictionary *) info;
-- (void) drawDirectionCue:(NSDictionary *) info;
-- (void) drawClock:(NSDictionary *) info;
-- (void) drawWeaponsOfflineText:(NSDictionary *) info;
-- (void) drawFPSInfoCounter:(NSDictionary *) info;
-- (void) drawScoopStatus:(NSDictionary *) info;
-- (void) drawStickSenitivityIndicator:(NSDictionary *) info;
+- (void) drawAegis:(NSDictionary *)info;
+- (void) drawSpeedBar:(NSDictionary *)info;
+- (void) drawRollBar:(NSDictionary *)info;
+- (void) drawPitchBar:(NSDictionary *)info;
+- (void) drawYawBar:(NSDictionary *)info;
+- (void) drawEnergyGauge:(NSDictionary *)info;
+- (void) drawForwardShieldBar:(NSDictionary *)info;
+- (void) drawAftShieldBar:(NSDictionary *)info;
+- (void) drawFuelBar:(NSDictionary *)info;
+- (void) drawCabinTempBar:(NSDictionary *)info;
+- (void) drawWeaponTempBar:(NSDictionary *)info;
+- (void) drawAltitudeBar:(NSDictionary *)info;
+- (void) drawMissileDisplay:(NSDictionary *)info;
+- (void) drawTargetReticle:(NSDictionary *)info;
+- (void) drawStatusLight:(NSDictionary *)info;
+- (void) drawDirectionCue:(NSDictionary *)info;
+- (void) drawClock:(NSDictionary *)info;
+- (void) drawWeaponsOfflineText:(NSDictionary *)info;
+- (void) drawFPSInfoCounter:(NSDictionary *)info;
+- (void) drawScoopStatus:(NSDictionary *)info;
+- (void) drawStickSenitivityIndicator:(NSDictionary *)info;
 
-- (void) drawGreenSurround:(NSDictionary *) info;
-- (void) drawYellowSurround:(NSDictionary *) info;
+- (void) drawGreenSurround:(NSDictionary *)info;
+- (void) drawYellowSurround:(NSDictionary *)info;
 
-- (void) drawTrumbles:(NSDictionary *) info;
+- (void) drawTrumbles:(NSDictionary *)info;
 
 - (NSArray *) crosshairDefinitionForWeaponType:(OOWeaponType)weapon;
 
@@ -171,7 +171,7 @@ OOINLINE void GLColorWithOverallAlpha(const GLfloat *color, GLfloat alpha)
 	
 	self = [super init];
 	
-	line_width = 1.0;
+	lineWidth = 1.0;
 	
 	if (sFontTexture == nil)  InitTextEngine();
 	
@@ -430,7 +430,7 @@ OOINLINE void GLColorWithOverallAlpha(const GLfloat *color, GLfloat alpha)
 	if (newHudName != nil)
 	{
 		[hudName release];
-		hudName = [[NSString stringWithString:newHudName] retain];
+		hudName = [newHudName copy];
 	}
 }
 
@@ -497,7 +497,7 @@ OOINLINE void GLColorWithOverallAlpha(const GLfloat *color, GLfloat alpha)
 - (void) setDeferredHudName:(NSString *)newDeferredHudName
 {
 	[deferredHudName release];
-	deferredHudName = [[NSString stringWithString:newDeferredHudName] retain];
+	deferredHudName = [newDeferredHudName copy];
 }
 
 
@@ -507,7 +507,7 @@ OOINLINE void GLColorWithOverallAlpha(const GLfloat *color, GLfloat alpha)
 }
 
 
-- (void) addLegend:(NSDictionary *) info
+- (void) addLegend:(NSDictionary *)info
 {
 	NSString			*imageName = nil;
 	OOTexture			*texture = nil;
@@ -548,7 +548,7 @@ OOINLINE void GLColorWithOverallAlpha(const GLfloat *color, GLfloat alpha)
 }
 
 
-- (void) addDial:(NSDictionary *) info
+- (void) addDial:(NSDictionary *)info
 {
 	static NSSet *allowedSelectors = nil;
 	if (allowedSelectors == nil)
@@ -580,15 +580,15 @@ OOINLINE void GLColorWithOverallAlpha(const GLfloat *color, GLfloat alpha)
 {
 	hudUpdating = YES;
 	
-	if (_crosshairWidth * line_width > 0)
+	if (_crosshairWidth * lineWidth > 0)
 	{
-		OOGL(glLineWidth(_crosshairWidth * line_width));
+		OOGL(glLineWidth(_crosshairWidth * lineWidth));
 		[self drawCrosshairs];
 	}
 	
-	if (line_width > 0)
+	if (lineWidth > 0)
 	{
-		OOGL(glLineWidth(line_width));
+		OOGL(glLineWidth(lineWidth));
 		[self drawLegends];
 	}
 	
@@ -690,10 +690,10 @@ OOINLINE void GLColorWithOverallAlpha(const GLfloat *color, GLfloat alpha)
 		_crosshairOverrides = [[ResourceManager dictionaryFromFilesNamed:@"crosshairs.plist"
 																													 inFolder:@"Config"
 																													 andMerge:YES] retain];
-		crosshairDefinition = [[NSString stringWithString:@"crosshairs.plist"] retain];
+		crosshairDefinition = @"crosshairs.plist";
 		return NO;
 	}
-	crosshairDefinition = [[NSString stringWithString:newDefinition] retain];
+	crosshairDefinition = [newDefinition copy];
 	return YES;
 }
 
@@ -732,7 +732,7 @@ OOINLINE void GLColorWithOverallAlpha(const GLfloat *color, GLfloat alpha)
 }
 
 
-- (void) drawLegend:(NSDictionary *) info
+- (void) drawLegend:(NSDictionary *)info
 {
 	OOTextureSprite				*legendSprite = nil;
 	NSString					*legendText = nil;
@@ -770,7 +770,7 @@ OOINLINE void GLColorWithOverallAlpha(const GLfloat *color, GLfloat alpha)
 }
 
 
-- (void) drawHUDItem:(NSDictionary *) info
+- (void) drawHUDItem:(NSDictionary *)info
 {
 	NSString *equipment = [info oo_stringForKey:EQUIPMENT_REQUIRED_KEY];
 	if (equipment != nil && ![PLAYER hasEquipmentItem:equipment])
@@ -791,7 +791,7 @@ OOINLINE void GLColorWithOverallAlpha(const GLfloat *color, GLfloat alpha)
 //---------------------------------------------------------------------//
 
 static BOOL hostiles;
-- (void) drawScanner:(NSDictionary *) info
+- (void) drawScanner:(NSDictionary *)info
 {
 	int				x;
 	int				y;
@@ -823,7 +823,7 @@ static BOOL hostiles;
 	
 	double			max_zoomed_range2 = SCANNER_SCALE*SCANNER_SCALE*10000.0/(scanner_zoom*scanner_zoom);
 	
-	GLfloat			max_zoomed_range = sqrtf(max_zoomed_range2);
+	GLfloat			max_zoomed_range = sqrt(max_zoomed_range2);
 	
 	BOOL			isHostile = NO;
 	BOOL			foundHostiles = NO;
@@ -854,7 +854,7 @@ static BOOL hostiles;
 	rotMatrix = [player rotationMatrix];
 	
 	OOGL(glColor4fv(scanner_color));
-	drawScannerGrid(x, y, z1, siz, [UNIVERSE viewDirection], line_width, scanner_zoom);
+	drawScannerGrid(x, y, z1, siz, [UNIVERSE viewDirection], lineWidth, scanner_zoom);
 	
 	OOEntityStatus p_status = [player status];
 	
@@ -901,18 +901,20 @@ static BOOL hostiles;
 				{
 					switch (drawClass)
 					{
-						case CLASS_BUOY :
-						case CLASS_ROCK :
-						case CLASS_CARGO :
-						case CLASS_MINE :
+						case CLASS_BUOY:
+						case CLASS_ROCK:
+						case CLASS_CARGO:
+						case CLASS_MINE:
+						case CLASS_VISUAL_EFFECT:
 							break;
-						case CLASS_THARGOID :
-						case CLASS_MISSILE :
-						case CLASS_STATION :
-						case CLASS_POLICE :
-						case CLASS_MILITARY :
-						case CLASS_WORMHOLE :
-						default :
+							
+						case CLASS_THARGOID:
+						case CLASS_MISSILE:
+						case CLASS_STATION:
+						case CLASS_POLICE:
+						case CLASS_MILITARY:
+						case CLASS_WORMHOLE:
+						default:
 							mass_locked = YES;
 							break;
 					}
@@ -924,7 +926,7 @@ static BOOL hostiles;
 					continue;
 				
 				// exit if it's too far away
-				GLfloat	act_dist = sqrtf(drawthing->zero_distance);
+				GLfloat	act_dist = sqrt(drawthing->zero_distance);
 				GLfloat	lim_dist = act_dist - drawthing->collision_radius;
 				
 				if (lim_dist > max_zoomed_range)
@@ -965,7 +967,13 @@ static BOOL hostiles;
 					GLfloat* base_col = [ship scannerDisplayColorForShip:player :isHostile :flash :[ship scannerDisplayColor1] :[ship scannerDisplayColor2]];
 					col[0] = base_col[0];	col[1] = base_col[1];	col[2] = base_col[2];	col[3] = alpha * base_col[3];
 				}
-				
+				else if ([drawthing isVisualEffect])
+				{
+					OOVisualEffectEntity *vis = (OOVisualEffectEntity *)drawthing;
+					GLfloat* base_col = [vis scannerDisplayColorForShip:flash :[vis scannerDisplayColor1] :[vis scannerDisplayColor2]];
+					col[0] = base_col[0];	col[1] = base_col[1];	col[2] = base_col[2];	col[3] = alpha * base_col[3];
+				}
+
 				if ([drawthing isWormhole])
 				{
 					col[0] = blue_color[0];	col[1] = (flash)? 1.0 : blue_color[1];	col[2] = blue_color[2];	col[3] = alpha * blue_color[3];
@@ -976,21 +984,24 @@ static BOOL hostiles;
 				
 				switch (drawClass)
 				{
-					case CLASS_THARGOID :
+					case CLASS_VISUAL_EFFECT:
+						break;
+
+					case CLASS_THARGOID:
 						foundHostiles = YES;
 						break;
-					case CLASS_ROCK :
-					case CLASS_CARGO :
-					case CLASS_MISSILE :
-					case CLASS_STATION :
-					case CLASS_BUOY :
-					case CLASS_POLICE :
-					case CLASS_MILITARY :
-					case CLASS_MINE :
-					case CLASS_WORMHOLE :
-					default :
-						if (isHostile)
-							foundHostiles = YES;
+
+					case CLASS_ROCK:
+					case CLASS_CARGO:
+					case CLASS_MISSILE:
+					case CLASS_STATION:
+					case CLASS_BUOY:
+					case CLASS_POLICE:
+					case CLASS_MILITARY:
+					case CLASS_MINE:
+					case CLASS_WORMHOLE:
+					default:
+						foundHostiles |= isHostile;
 						break;
 				}
 				
@@ -1095,7 +1106,7 @@ static BOOL hostiles;
 }
 
 
-- (void) drawScannerZoomIndicator:(NSDictionary *) info
+- (void) drawScannerZoomIndicator:(NSDictionary *)info
 {
 	int				x;
 	int				y;
@@ -1138,7 +1149,7 @@ static BOOL hostiles;
 }
 
 
-- (void) drawCompass:(NSDictionary *) info
+- (void) drawCompass:(NSDictionary *)info
 {
 	int				x;
 	int				y;
@@ -1170,7 +1181,7 @@ static BOOL hostiles;
 	GLfloat h3 = siz.height * 0.375;
 	GLfloat w1 = siz.width * 0.125;
 	GLfloat w3 = siz.width * 0.375;
-	OOGL(glLineWidth(2.0 * line_width));	// thicker
+	OOGL(glLineWidth(2.0 * lineWidth));	// thicker
 	OOGL(glColor4f(compass_color[0], compass_color[1], compass_color[2], alpha));
 	GLDrawOval(x, y, z1, siz, 12);	
 	OOGL(glColor4f(compass_color[0], compass_color[1], compass_color[2], 0.5f * alpha));
@@ -1180,7 +1191,7 @@ static BOOL hostiles;
 		glVertex3f(x, y - h1, z1);	glVertex3f(x, y - h3, z1);
 		glVertex3f(x, y + h1, z1);	glVertex3f(x, y + h3, z1);
 	OOGLEND();
-	OOGL(glLineWidth(line_width));	// thinner
+	OOGL(glLineWidth(lineWidth));	// thinner
 	
 	OOSunEntity		*the_sun = [UNIVERSE sun];
 	OOPlanetEntity	*the_planet = [UNIVERSE planet];
@@ -1360,26 +1371,6 @@ OOINLINE void SetCompassBlipColor(GLfloat relativeZ, GLfloat alpha)
 }
 
 
-- (void) drawCompassWitchpointBlipAt:(Vector) relativePosition Size:(NSSize) siz Alpha:(GLfloat) alpha
-{
-	SetCompassBlipColor(relativePosition.z, alpha);
-	
-	OOGLBEGIN(GL_LINES);
-		glVertex3f(relativePosition.x - 0.5 * siz.width, relativePosition.y + 0.5 * siz.height, z1);
-		glVertex3f(relativePosition.x - 0.25 * siz.width, relativePosition.y - 0.5 * siz.height, z1);
-		
-		glVertex3f(relativePosition.x - 0.25 * siz.width, relativePosition.y - 0.5 * siz.height, z1);
-		glVertex3f(relativePosition.x, relativePosition.y, z1);
-		
-		glVertex3f(relativePosition.x, relativePosition.y, z1);
-		glVertex3f(relativePosition.x + 0.25 * siz.width, relativePosition.y - 0.5 * siz.height, z1);
-		
-		glVertex3f(relativePosition.x + 0.25 * siz.width, relativePosition.y - 0.5 * siz.height, z1);
-		glVertex3f(relativePosition.x + 0.5 * siz.width, relativePosition.y + 0.5 * siz.height, z1);
-	OOGLEND();
-}
-
-
 - (void) drawCompassBeaconBlipAt:(Vector) relativePosition Size:(NSSize) siz Alpha:(GLfloat) alpha
 {
 	SetCompassBlipColor(relativePosition.z, alpha);
@@ -1409,7 +1400,7 @@ OOINLINE void SetCompassBlipColor(GLfloat relativeZ, GLfloat alpha)
 }
 
 
-- (void) drawAegis:(NSDictionary *) info
+- (void) drawAegis:(NSDictionary *)info
 {
 	if (([UNIVERSE viewDirection] == VIEW_GUI_DISPLAY)||([UNIVERSE sun] == nil)||([PLAYER checkForAegis] != AEGIS_IN_DOCKING_RANGE))
 		return;	// don't draw
@@ -1464,14 +1455,14 @@ OOINLINE void SetCompassBlipColor(GLfloat relativeZ, GLfloat alpha)
 }
 
 
-- (void) drawSpeedBar:(NSDictionary *) info
+- (void) drawSpeedBar:(NSDictionary *)info
 {
 	PlayerEntity	*player = PLAYER;
 	int				x;
 	int				y;
 	NSSize			siz;
 	BOOL			draw_surround;
-	GLfloat		alpha = overallAlpha;
+	GLfloat			alpha = overallAlpha;
 	
 	x = [info oo_intForKey:X_KEY defaultValue:SPEED_BAR_CENTRE_X] +
 		[[UNIVERSE gameView] x_offset] *
@@ -1503,14 +1494,14 @@ OOINLINE void SetCompassBlipColor(GLfloat relativeZ, GLfloat alpha)
 }
 
 
-- (void) drawRollBar:(NSDictionary *) info
+- (void) drawRollBar:(NSDictionary *)info
 {
 	PlayerEntity	*player = PLAYER;
 	int				x;
 	int				y;
 	NSSize			siz;
 	BOOL			draw_surround;
-	GLfloat		alpha = overallAlpha;
+	GLfloat			alpha = overallAlpha;
 	
 	x = [info oo_intForKey:X_KEY defaultValue:ROLL_BAR_CENTRE_X] +
 		[[UNIVERSE gameView] x_offset] *
@@ -1535,7 +1526,7 @@ OOINLINE void SetCompassBlipColor(GLfloat relativeZ, GLfloat alpha)
 }
 
 
-- (void) drawPitchBar:(NSDictionary *) info
+- (void) drawPitchBar:(NSDictionary *)info
 {
 	PlayerEntity	*player = PLAYER;
 	int				x;
@@ -1567,14 +1558,14 @@ OOINLINE void SetCompassBlipColor(GLfloat relativeZ, GLfloat alpha)
 }
 
 
-- (void) drawYawBar:(NSDictionary *) info
+- (void) drawYawBar:(NSDictionary *)info
 {
 	PlayerEntity	*player = PLAYER;
 	int				x;
 	int				y;
 	NSSize			siz;
 	BOOL			draw_surround;
-	GLfloat		alpha = overallAlpha;
+	GLfloat			alpha = overallAlpha;
 	
 	// YAW does not exist in strict mode
 	if ([UNIVERSE strict])  return;
@@ -1602,14 +1593,14 @@ OOINLINE void SetCompassBlipColor(GLfloat relativeZ, GLfloat alpha)
 }
 
 
-- (void) drawEnergyGauge:(NSDictionary *) info
+- (void) drawEnergyGauge:(NSDictionary *)info
 {
 	PlayerEntity	*player = PLAYER;
 	int				x;
 	int				y;
 	NSSize			siz;
 	BOOL			draw_surround, labelled;
-	GLfloat		alpha = overallAlpha;
+	GLfloat			alpha = overallAlpha;
 	
 	x = [info oo_intForKey:X_KEY defaultValue:ENERGY_GAUGE_CENTRE_X] +
 		[[UNIVERSE gameView] x_offset] *
@@ -1676,14 +1667,14 @@ OOINLINE void SetCompassBlipColor(GLfloat relativeZ, GLfloat alpha)
 }
 
 
-- (void) drawForwardShieldBar:(NSDictionary *) info
+- (void) drawForwardShieldBar:(NSDictionary *)info
 {
 	PlayerEntity	*player = PLAYER;
 	int				x;
 	int				y;
 	NSSize			siz;
 	BOOL			draw_surround;
-	GLfloat		alpha = overallAlpha;
+	GLfloat			alpha = overallAlpha;
 	
 	x = [info oo_intForKey:X_KEY defaultValue:FORWARD_SHIELD_BAR_CENTRE_X] +
 		[[UNIVERSE gameView] x_offset] *
@@ -1713,14 +1704,14 @@ OOINLINE void SetCompassBlipColor(GLfloat relativeZ, GLfloat alpha)
 }
 
 
-- (void) drawAftShieldBar:(NSDictionary *) info
+- (void) drawAftShieldBar:(NSDictionary *)info
 {
 	PlayerEntity	*player = PLAYER;
 	int				x;
 	int				y;
 	NSSize			siz;
 	BOOL			draw_surround;
-	GLfloat		alpha = overallAlpha;
+	GLfloat			alpha = overallAlpha;
 	
 	x = [info oo_intForKey:X_KEY defaultValue:AFT_SHIELD_BAR_CENTRE_X] +
 		[[UNIVERSE gameView] x_offset] *
@@ -1750,14 +1741,14 @@ OOINLINE void SetCompassBlipColor(GLfloat relativeZ, GLfloat alpha)
 }
 
 
-- (void) drawFuelBar:(NSDictionary *) info
+- (void) drawFuelBar:(NSDictionary *)info
 {
 	PlayerEntity	*player = PLAYER;
 	int				x;
 	int				y;
 	NSSize			siz;
 	float			fu, hr;
-	GLfloat		alpha = overallAlpha;
+	GLfloat			alpha = overallAlpha;
 	
 	x = [info oo_intForKey:X_KEY defaultValue:FUEL_BAR_CENTRE_X] +
 		[[UNIVERSE gameView] x_offset] *
@@ -1785,13 +1776,13 @@ OOINLINE void SetCompassBlipColor(GLfloat relativeZ, GLfloat alpha)
 }
 
 
-- (void) drawCabinTempBar:(NSDictionary *) info
+- (void) drawCabinTempBar:(NSDictionary *)info
 {
 	PlayerEntity	*player = PLAYER;
 	int				x;
 	int				y;
 	NSSize			siz;
-	GLfloat		alpha = overallAlpha;
+	GLfloat			alpha = overallAlpha;
 	
 	x = [info oo_intForKey:X_KEY defaultValue:CABIN_TEMP_BAR_CENTRE_X] +
 		[[UNIVERSE gameView] x_offset] *
@@ -1827,13 +1818,13 @@ OOINLINE void SetCompassBlipColor(GLfloat relativeZ, GLfloat alpha)
 }
 
 
-- (void) drawWeaponTempBar:(NSDictionary *) info
+- (void) drawWeaponTempBar:(NSDictionary *)info
 {
 	PlayerEntity	*player = PLAYER;
 	int				x;
 	int				y;
 	NSSize			siz;
-	GLfloat		alpha = overallAlpha;
+	GLfloat			alpha = overallAlpha;
 	
 	x = [info oo_intForKey:X_KEY defaultValue:WEAPON_TEMP_BAR_CENTRE_X] +
 		[[UNIVERSE gameView] x_offset] *
@@ -1857,13 +1848,13 @@ OOINLINE void SetCompassBlipColor(GLfloat relativeZ, GLfloat alpha)
 }
 
 
-- (void) drawAltitudeBar:(NSDictionary *) info
+- (void) drawAltitudeBar:(NSDictionary *)info
 {
 	PlayerEntity	*player = PLAYER;
 	int				x;
 	int				y;
 	NSSize			siz;
-	GLfloat		alpha = overallAlpha;
+	GLfloat			alpha = overallAlpha;
 	
 	x = [info oo_intForKey:X_KEY defaultValue:ALTITUDE_BAR_CENTRE_X] +
 		[[UNIVERSE gameView] x_offset] *
@@ -1973,11 +1964,11 @@ static OOPolygonSprite *IconForMissileRole(NSString *role)
 		
 		switch (status)
 		{
-			case MISSILE_STATUS_SAFE :
-				GLColorWithOverallAlpha(green_color, alpha);		break;
-			case MISSILE_STATUS_ARMED :
+			case MISSILE_STATUS_SAFE:
+				GLColorWithOverallAlpha(green_color, alpha);	break;
+			case MISSILE_STATUS_ARMED:
 				GLColorWithOverallAlpha(yellow_color, alpha);	break;
-			case MISSILE_STATUS_TARGET_LOCKED :
+			case MISSILE_STATUS_TARGET_LOCKED:
 				GLColorWithOverallAlpha(red_color, alpha);		break;
 		}
 	}
@@ -2011,14 +2002,14 @@ static OOPolygonSprite *IconForMissileRole(NSString *role)
 }
 
 
-- (void) drawMissileDisplay:(NSDictionary *) info
+- (void) drawMissileDisplay:(NSDictionary *)info
 {
 	PlayerEntity	*player = PLAYER;
 	int				x;
 	int				y;
 	NSSize			siz;
 	int				sp;
-	GLfloat		alpha = overallAlpha;
+	GLfloat			alpha = overallAlpha;
 	
 	x = [info oo_intForKey:X_KEY defaultValue:MISSILES_DISPLAY_X] +
 		[[UNIVERSE gameView] x_offset] *
@@ -2031,7 +2022,8 @@ static OOPolygonSprite *IconForMissileRole(NSString *role)
 	siz.height = [info oo_nonNegativeFloatForKey:HEIGHT_KEY defaultValue:MISSILE_ICON_HEIGHT];
 	alpha *= [info oo_nonNegativeFloatForKey:ALPHA_KEY defaultValue:1.0f];
 	
-	if (![player weaponsOnline])  alpha *= 0.2f;	// darken missile display if weapons are offline
+	BOOL weaponsOnline = [player weaponsOnline];
+	if (!weaponsOnline)  alpha *= 0.2f;	// darken missile display if weapons are offline
 	
 	if (![player dialIdentEngaged])
 	{
@@ -2044,16 +2036,16 @@ static OOPolygonSprite *IconForMissileRole(NSString *role)
 			if (missile)
 			{
 				[self drawIconForMissile:missile
-								selected:i == [player activeMissile]
+								selected:weaponsOnline && i == [player activeMissile]
 								  status:status
 									   x:x + (int)i * sp + 2 y:y
-								   width:siz.width *0.25f height:siz.height *0.25f
+								   width:siz.width * 0.25f height:siz.height * 0.25f
 								   alpha:alpha];
 			}
 			else
 			{
 				[self drawIconForEmptyPylonAtX:x + (int)i * sp + 2 y:y
-									width:siz.width *0.25f height:siz.height *0.25f alpha:alpha];
+									width:siz.width * 0.25f height:siz.height * 0.25f alpha:alpha];
 			}
 		}
 	}
@@ -2065,12 +2057,12 @@ static OOPolygonSprite *IconForMissileRole(NSString *role)
 		sp *= 0.75;
 		switch ([player dialMissileStatus])
 		{
-			case MISSILE_STATUS_SAFE :
+			case MISSILE_STATUS_SAFE:
 				GLColorWithOverallAlpha(green_color, alpha);	break;
-			case MISSILE_STATUS_ARMED :
+			case MISSILE_STATUS_ARMED:
 				GLColorWithOverallAlpha(yellow_color, alpha);	break;
-			case MISSILE_STATUS_TARGET_LOCKED :
-				GLColorWithOverallAlpha(red_color, alpha);	break;
+			case MISSILE_STATUS_TARGET_LOCKED:
+				GLColorWithOverallAlpha(red_color, alpha);		break;
 		}
 		OOGLBEGIN(GL_QUADS);
 			glVertex3i(x , y, z1);
@@ -2085,12 +2077,12 @@ static OOPolygonSprite *IconForMissileRole(NSString *role)
 }
 
 
-- (void) drawTargetReticle:(NSDictionary *) info
+- (void) drawTargetReticle:(NSDictionary *)info
 {
 	PlayerEntity *player = PLAYER;
 	GLfloat alpha = [info oo_nonNegativeFloatForKey:ALPHA_KEY defaultValue:1.0f] * overallAlpha;
 	
-	if ([player primaryTargetID] != NO_TARGET)
+	if ([player primaryTarget] != nil)
 	{
 		hudDrawReticleOnTarget([player primaryTarget], player, z1, alpha, reticleTargetSensitive, propertiesReticleTargetSensitive);
 		[self drawDirectionCue:info];
@@ -2098,14 +2090,14 @@ static OOPolygonSprite *IconForMissileRole(NSString *role)
 }
 
 
-- (void) drawStatusLight:(NSDictionary *) info
+- (void) drawStatusLight:(NSDictionary *)info
 {
 	PlayerEntity	*player = PLAYER;
 	int				x;
 	int				y;
 	NSSize			siz;
 	BOOL			blueAlert = cloakIndicatorOnStatusLight && [player isCloaked];
-	GLfloat		alpha = overallAlpha;
+	GLfloat			alpha = overallAlpha;
 	
 	x = [info oo_intForKey:X_KEY defaultValue:STATUS_LIGHT_CENTRE_X] +
 		[[UNIVERSE gameView] x_offset] *
@@ -2123,23 +2115,26 @@ static OOPolygonSprite *IconForMissileRole(NSString *role)
 	
 	switch(alertCondition)
 	{
-		case ALERT_CONDITION_RED :
+		case ALERT_CONDITION_RED:
 			status_color[0] = red_color[0];
 			status_color[1] = red_color[1];
 			status_color[2] = blueAlert ? blue_color[2] : red_color[2];
 			break;
-		case ALERT_CONDITION_GREEN :
+			
+		case ALERT_CONDITION_GREEN:
 			status_color[0] = green_color[0];
 			status_color[1] = green_color[1];
 			status_color[2] = blueAlert ? blue_color[2] : green_color[2];
 			break;
-		case ALERT_CONDITION_YELLOW :
+			
+		case ALERT_CONDITION_YELLOW:
 			status_color[0] = yellow_color[0];
 			status_color[1] = yellow_color[1];
 			status_color[2] = blueAlert ? blue_color[2] : yellow_color[2];
 			break;
-		default :
-		case ALERT_CONDITION_DOCKED :
+			
+		default:
+		case ALERT_CONDITION_DOCKED:
 			break;
 	}
 	status_color[3] = flash_alpha;
@@ -2238,13 +2233,13 @@ static OOPolygonSprite *IconForMissileRole(NSString *role)
 }
 
 
-- (void) drawClock:(NSDictionary *) info
+- (void) drawClock:(NSDictionary *)info
 {
 	PlayerEntity	*player = PLAYER;
 	int				x;
 	int				y;
 	NSSize			siz;
-	GLfloat		alpha = overallAlpha;
+	GLfloat			alpha = overallAlpha;
 	
 	x = [info oo_intForKey:X_KEY defaultValue:CLOCK_DISPLAY_X] +
 		[[UNIVERSE gameView] x_offset] *
@@ -2261,7 +2256,7 @@ static OOPolygonSprite *IconForMissileRole(NSString *role)
 }
 
 
-- (void) drawWeaponsOfflineText:(NSDictionary *) info
+- (void) drawWeaponsOfflineText:(NSDictionary *)info
 {
 	PlayerEntity	*player = PLAYER;
 	
@@ -2270,7 +2265,7 @@ static OOPolygonSprite *IconForMissileRole(NSString *role)
 		int				x;
 		int				y;
 		NSSize			siz;
-		GLfloat		alpha = overallAlpha;
+		GLfloat			alpha = overallAlpha;
 		
 		x = [info oo_intForKey:X_KEY defaultValue:WEAPONSOFFLINETEXT_DISPLAY_X] +
 			[[UNIVERSE gameView] x_offset] *
@@ -2288,7 +2283,7 @@ static OOPolygonSprite *IconForMissileRole(NSString *role)
 }
 
 
-- (void) drawFPSInfoCounter:(NSDictionary *) info
+- (void) drawFPSInfoCounter:(NSDictionary *)info
 {
 	if (![UNIVERSE displayFPS])  return;
 	
@@ -2328,7 +2323,7 @@ static OOPolygonSprite *IconForMissileRole(NSString *role)
 }
 
 
-- (void) drawScoopStatus:(NSDictionary *) info
+- (void) drawScoopStatus:(NSDictionary *)info
 {
 	PlayerEntity	*player = PLAYER;
 	int				x;
@@ -2358,14 +2353,16 @@ static OOPolygonSprite *IconForMissileRole(NSString *role)
 	
 	switch (scoop_status)
 	{
-		case SCOOP_STATUS_NOT_INSTALLED :
+		case SCOOP_STATUS_NOT_INSTALLED:
 			return;	// don't draw
-		case SCOOP_STATUS_FULL_HOLD :
+			
+		case SCOOP_STATUS_FULL_HOLD:
 			s0_color = darkgreen_color;
 			alpha *= 0.75;
 			break;
-		case SCOOP_STATUS_ACTIVE :
-		case SCOOP_STATUS_OKAY :
+			
+		case SCOOP_STATUS_ACTIVE:
+		case SCOOP_STATUS_OKAY:
 			s0_color = green_color;
 			break;
 	}
@@ -2421,7 +2418,7 @@ static OOPolygonSprite *IconForMissileRole(NSString *role)
 }
 
 
-- (void) drawStickSensitivityIndicator:(NSDictionary *) info
+- (void) drawStickSensitivityIndicator:(NSDictionary *)info
 {
 	GLfloat			x, y;
 	NSSize			siz;
@@ -2446,7 +2443,7 @@ static OOPolygonSprite *IconForMissileRole(NSString *role)
 	GLDrawFilledOval(x, y, z1, siz, 10);
 	
 	GLColorWithOverallAlpha((div < 1.0 || mouse) ? lightgray_color : green_color, alpha);
-	OOGL(glLineWidth(_crosshairWidth * line_width));
+	OOGL(glLineWidth(_crosshairWidth * lineWidth));
 	
 	if (div >= 1.0)
 	{
@@ -2461,8 +2458,8 @@ static OOPolygonSprite *IconForMissileRole(NSString *role)
 		
 		if ([stickHandler joystickCount])
 		{
-			siz.width -= _crosshairWidth * line_width / 2;
-			siz.height -= _crosshairWidth * line_width / 2;
+			siz.width -= _crosshairWidth * lineWidth / 2;
+			siz.height -= _crosshairWidth * lineWidth / 2;
 			GLDrawOval(x, y, z1, siz, 10);
 		}
 	}
@@ -2496,19 +2493,19 @@ static OOPolygonSprite *IconForMissileRole(NSString *role)
 }
 
 
-- (void) drawGreenSurround:(NSDictionary *) info
+- (void) drawGreenSurround:(NSDictionary *)info
 {
 	[self drawSurround:info color:green_color];
 }
 
 
-- (void) drawYellowSurround:(NSDictionary *) info
+- (void) drawYellowSurround:(NSDictionary *)info
 {
 	[self drawSurround:info color:yellow_color];
 }
 
 
-- (void) drawTrumbles:(NSDictionary *) info
+- (void) drawTrumbles:(NSDictionary *)info
 {
 	PlayerEntity *player = PLAYER;
 	
@@ -2716,22 +2713,26 @@ static void hudDrawReticleOnTarget(Entity* target, PlayerEntity* player1, GLfloa
 	switch ([UNIVERSE viewDirection])
 	{
 		default:
-		case VIEW_FORWARD :
+		case VIEW_FORWARD:
 			view_dir.x = 0.0;   view_dir.y = 0.0;   view_dir.z = 1.0;
 			break;
-		case VIEW_AFT :
+			
+		case VIEW_AFT:
 			view_dir.x = 0.0;   view_dir.y = 0.0;   view_dir.z = -1.0;
 			quaternion_rotate_about_axis(&back_q, v1, M_PI);
 			break;
-		case VIEW_PORT :
+			
+		case VIEW_PORT:
 			view_dir.x = -1.0;   view_dir.y = 0.0;   view_dir.z = 0.0;
 			quaternion_rotate_about_axis(&back_q, v1, 0.5 * M_PI);
 			break;
-		case VIEW_STARBOARD :
+			
+		case VIEW_STARBOARD:
 			view_dir.x = 1.0;   view_dir.y = 0.0;   view_dir.z = 0.0;
 			quaternion_rotate_about_axis(&back_q, v1, -0.5 * M_PI);
 			break;
-		case VIEW_CUSTOM :
+			
+		case VIEW_CUSTOM:
 			view_dir = [player1 customViewForwardVector];
 			view_up = [player1 customViewUpVector];
 			back_q = quaternion_multiply([player1 customViewQuaternion], back_q);
@@ -2748,7 +2749,7 @@ static void hudDrawReticleOnTarget(Entity* target, PlayerEntity* player1, GLfloa
 	//rotate to face player1
 	GLMultOOMatrix(back_mat);
 	// draw the reticle
-	float range = sqrtf(target->zero_distance) - target->collision_radius;
+	float range = sqrt(target->zero_distance) - target->collision_radius;
 	
 	// Draw reticle cyan for Wormholes
 	if ([target isWormhole])
@@ -3146,22 +3147,25 @@ static void drawScannerGrid(double x, double y, double z, NSSize siz, int v_dir,
 
 		switch (v_dir)
 		{
-			case VIEW_BREAK_PATTERN :
-			case VIEW_GUI_DISPLAY :
-			case VIEW_FORWARD :
-			case VIEW_NONE :
+			case VIEW_BREAK_PATTERN:
+			case VIEW_GUI_DISPLAY:
+			case VIEW_FORWARD:
+			case VIEW_NONE:
 				glVertex3f(x, y, z); glVertex3f(x - w2, y + hh, z);
 				glVertex3f(x, y, z); glVertex3f(x + w2, y + hh, z);
 				break;
-			case VIEW_AFT :
+				
+			case VIEW_AFT:
 				glVertex3f(x, y, z); glVertex3f(x - w2, y - hh, z);
 				glVertex3f(x, y, z); glVertex3f(x + w2, y - hh, z);
 				break;
-			case VIEW_PORT :
+				
+			case VIEW_PORT:
 				glVertex3f(x, y, z); glVertex3f(x - ww, y + h2, z);
 				glVertex3f(x, y, z); glVertex3f(x - ww, y - h2, z);
 				break;
-			case VIEW_STARBOARD :
+				
+			case VIEW_STARBOARD:
 				glVertex3f(x, y, z); glVertex3f(x + ww, y + h2, z);
 				glVertex3f(x, y, z); glVertex3f(x + ww, y - h2, z);
 				break;
@@ -3183,23 +3187,23 @@ static void DrawSpecialOval(GLfloat x, GLfloat y, GLfloat z, NSSize siz, GLfloat
 	OOGLBEGIN(GL_LINE_LOOP);
 		for (theta = 0.0f; theta < (2.0f * M_PI); theta += delta)
 		{
-			s = sinf(theta);
-			glColor4f(color4v[0], color4v[1], color4v[2], fabsf(s * color4v[3]));
-			glVertex3f(x + ww * s, y + hh * cosf(theta), z);
+			s = sin(theta);
+			glColor4f(color4v[0], color4v[1], color4v[2], fabs(s * color4v[3]));
+			glVertex3f(x + ww * s, y + hh * cos(theta), z);
 		}
 	OOGLEND();
 }
 
 
-- (void) setLine_width:(GLfloat) value
+- (void) setLineWidth:(GLfloat) value
 {
-	line_width = value;
+	lineWidth = value;
 }
 
 
-- (GLfloat) line_width
+- (GLfloat) lineWidth
 {
-	return line_width;
+	return lineWidth;
 }
 
 @end

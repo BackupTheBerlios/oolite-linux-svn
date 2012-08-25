@@ -188,11 +188,9 @@ OOINLINE Vector vector_add(Vector a, Vector b)
 
 OOINLINE Vector OOVectorInterpolate(Vector a, Vector b, OOScalar where)
 {
-	// TODO: use smarter interpolation like OOLerp()?
-	OOScalar invWhere = 1.0f - where;
-	return make_vector(a.x * invWhere + b.x * where,
-					   a.y * invWhere + b.y * where,
-					   a.z * invWhere + b.z * where);
+	return make_vector(OOLerp(a.x, b.x, where),
+					   OOLerp(a.y, b.y, where),
+					   OOLerp(a.z, b.z, where));
 }
 
 
@@ -234,7 +232,7 @@ OOINLINE OOScalar magnitude2(Vector vec)
 
 OOINLINE OOScalar magnitude(Vector vec)
 {
-	return sqrtf(magnitude2(vec));
+	return sqrt(magnitude2(vec));
 }
 
 
@@ -242,7 +240,7 @@ OOINLINE Vector vector_normal_or_fallback(Vector vec, Vector fallback)
 {
 	OOScalar mag2 = magnitude2(vec);
 	if (EXPECT_NOT(mag2 == 0.0f))  return fallback;
-	return vector_multiply_scalar(vec, 1.0f / sqrtf(mag2));
+	return vector_multiply_scalar(vec, 1.0f / sqrt(mag2));
 }
 
 

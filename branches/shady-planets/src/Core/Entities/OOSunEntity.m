@@ -83,7 +83,7 @@ MA 02110-1301, USA.
 */
 
 	// anything more than a minimal hue drift will wipe out the original colour.
-	float hue_drift = 0.038f * fabsf(randf() - randf());
+	float hue_drift = 0.038f * fabs(randf() - randf());
 	
 	// set the lighting color for the sun
 	GLfloat		r,g,b,a;
@@ -224,7 +224,7 @@ MA 02110-1301, USA.
 	
 	PlayerEntity	*player = PLAYER;
 	assert(player != nil);
-	rotMatrix = OOMatrixForBillboard(position, [player position]);
+	rotMatrix = OOMatrixForBillboard(position, [player viewpointPosition]);
 	
 	if (throw_sparks && velocity.z > 0)	// going NOVA!
 	{
@@ -305,11 +305,11 @@ MA 02110-1301, USA.
 {
 	int subdivideLevel = 2;		// 4 is probably the maximum!
 	
-	float sqrt_zero_distance = sqrtf(zero_distance);
+	float sqrt_zero_distance = sqrt(cam_zero_distance);
 	float drawFactor = [[UNIVERSE gameView] viewSize].width / 100.0;
 	float drawRatio2 = drawFactor * collision_radius / sqrt_zero_distance; // equivalent to size on screen in pixels
 	
-	if (zero_distance > 0.0)
+	if (cam_zero_distance > 0.0)
 	{
 		subdivideLevel = 2 + floor(drawRatio2);
 		if (subdivideLevel > 4)
@@ -329,7 +329,7 @@ MA 02110-1301, USA.
 	distances.
 	 
 	*/
-	BOOL ignoreDepthBuffer = zero_distance > collision_radius * collision_radius * 25;
+	BOOL ignoreDepthBuffer = cam_zero_distance > collision_radius * collision_radius * 25;
 	
 	int steps = 2 * (MAX_SUBDIVIDE - subdivideLevel);
 	
@@ -351,7 +351,7 @@ MA 02110-1301, USA.
 	if (![UNIVERSE reducedDetail])
 	{
 		OOGL(glDisable(GL_DEPTH_TEST));
-		if (zero_distance < lim4k)
+		if (cam_zero_distance < lim4k)
 		{
 			[self drawActiveCoronaWithInnerRadius:collision_radius
 											width:cor4k
@@ -360,7 +360,7 @@ MA 02110-1301, USA.
 											color:innerCoronaColor
 											   rv:6];
 		}
-		if (zero_distance < lim8k)
+		if (cam_zero_distance < lim8k)
 		{
 			[self drawActiveCoronaWithInnerRadius:collision_radius
 											width:cor8k
@@ -369,7 +369,7 @@ MA 02110-1301, USA.
 											color:middleCoronaColor
 											   rv:3];
 		}
-		if (zero_distance < lim16k)
+		if (cam_zero_distance < lim16k)
 		{
 			[self drawActiveCoronaWithInnerRadius:collision_radius
 											width:cor16k
@@ -404,7 +404,7 @@ MA 02110-1301, USA.
 	GLfloat				r = inner_radius;
 	GLfloat				c = outer_radius;
 	GLfloat				z = z_distance;
-	GLfloat				x = sqrtf(z * z - r * r);
+	GLfloat				x = sqrt(z * z - r * r);
 	
 	GLfloat				r1 = r * x / z;
 	GLfloat				z1 = r * r / z;
@@ -428,8 +428,8 @@ MA 02110-1301, USA.
 	OOGLBEGIN(GL_TRIANGLE_STRIP);
 		for (i = 0; i < 360; i += step)
 		{
-			si = sinf(theta);
-			ci = cosf(theta);
+			si = sin(theta);
+			ci = cos(theta);
 			theta += delta;
 			
 			rv0 = pt0 * rvalue[i + rv] + pt1 * rvalue[i + rv + 360];

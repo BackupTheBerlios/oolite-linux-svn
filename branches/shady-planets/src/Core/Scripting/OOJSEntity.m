@@ -81,6 +81,7 @@ enum
 	kEntity_isPlayer,			// is player, boolean, read-only.
 	kEntity_isShip,				// is ship, boolean, read-only.
 	kEntity_isStation,			// is station, boolean, read-only.
+	kEntity_isDock,				// is dock, boolean, read-only.
 	kEntity_isSubEntity,		// is subentity, boolean, read-only.
 	kEntity_isSun,				// is sun, boolean, read-only.
 	kEntity_isValid,			// is not stale, boolean, read-only.
@@ -106,6 +107,7 @@ static JSPropertySpec sEntityProperties[] =
 	{ "isPlanet",				kEntity_isPlanet,			OOJS_PROP_READONLY_CB },
 	{ "isPlayer",				kEntity_isPlayer,			OOJS_PROP_READONLY_CB },
 	{ "isShip",					kEntity_isShip,				OOJS_PROP_READONLY_CB },
+	{ "isDock",					kEntity_isDock,				OOJS_PROP_READONLY_CB },
 	{ "isStation",				kEntity_isStation,			OOJS_PROP_READONLY_CB },
 	{ "isSubEntity",			kEntity_isSubEntity,		OOJS_PROP_READONLY_CB },
 	{ "isSun",					kEntity_isSun,				OOJS_PROP_READONLY_CB },
@@ -239,6 +241,10 @@ static JSBool EntityGetProperty(JSContext *context, JSObject *this, jsid propID,
 		case kEntity_isStation:
 			*value = OOJSValueFromBOOL([entity isStation]);
 			return YES;
+
+		case kEntity_isDock:
+			*value = OOJSValueFromBOOL([entity isDock]);
+			return YES;
 			
 		case kEntity_isSubEntity:
 			*value = OOJSValueFromBOOL([entity isSubEntity]);
@@ -323,7 +329,7 @@ static JSBool EntitySetProperty(JSContext *context, JSObject *this, jsid propID,
 			if ([entity isShip] && ![entity isPlayer])
 			{
 				OOScanClass newClass = OOScanClassFromJSValue(context, *value);
-				if (newClass == CLASS_NOT_SET || newClass == CLASS_NO_DRAW || newClass == CLASS_TARGET || newClass == CLASS_WORMHOLE || newClass == CLASS_PLAYER)
+				if (newClass == CLASS_NOT_SET || newClass == CLASS_NO_DRAW || newClass == CLASS_TARGET || newClass == CLASS_WORMHOLE || newClass == CLASS_PLAYER || newClass == CLASS_VISUAL_EFFECT)
 				{
 					OOJSReportError(context, @"entity.scanClass cannot be set to that value.");
 					return NO;

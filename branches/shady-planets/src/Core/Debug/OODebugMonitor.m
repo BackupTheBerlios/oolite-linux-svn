@@ -143,7 +143,7 @@ static OODebugMonitor *sSingleton = nil;
 }
 
 
-+ (id)sharedDebugMonitor
++ (OODebugMonitor *) sharedDebugMonitor
 {
 	// NOTE: assumes single-threaded access. The debug monitor is not, on the whole, thread safe.
 	if (sSingleton == nil)
@@ -388,7 +388,7 @@ static NSString *SizeString(size_t size)
 	
 	float unit = 1 << (magnitude * 10);
 	float sizef = (float)size / unit;
-	sizef = roundf(sizef * 100.0f) / 100.f;
+	sizef = round(sizef * 100.0f) / 100.f;
 	
 	return [NSString stringWithFormat:@"%.2f %@", sizef, suffix];
 }

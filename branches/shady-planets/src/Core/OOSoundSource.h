@@ -38,6 +38,7 @@ OUT OF OR
 
 @interface OOSoundSource: NSObject
 {
+@private
 	OOSound						*_sound;
 	OOSoundChannel				*_channel;
 	BOOL						_loop;
@@ -45,7 +46,7 @@ OUT OF OR
 								_remainingCount;
 }
 
-+ (id) sourceWithSound:(OOSound *)inSound;
++ (instancetype) sourceWithSound:(OOSound *)inSound;
 - (id) initWithSound:(OOSound *)inSound;
 
 // These options should be set before playing. Effect of setting them while playing is undefined.

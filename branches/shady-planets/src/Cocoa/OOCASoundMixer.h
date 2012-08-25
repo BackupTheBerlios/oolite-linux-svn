@@ -45,6 +45,7 @@ enum
 
 @interface OOSoundMixer: NSObject
 {
+@private
 	OOSoundChannel				*_channels[kMixerGeneralChannels];
 	OOSoundChannel				*_freeList;
 	NSLock						*_listLock;
@@ -61,7 +62,7 @@ enum
 }
 
 // Singleton accessor
-+ (id) sharedMixer;
++ (OOSoundMixer *) sharedMixer;
 
 - (void) update;
 

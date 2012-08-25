@@ -60,7 +60,7 @@ MA 02110-1301, USA.
 
 - (id) initFromDictionary:(NSDictionary *)dict withAtmosphere:(BOOL)atmosphere andSeed:(Random_Seed)seed;
 
-- (id) miniatureVersion;
+- (instancetype) miniatureVersion;
 
 - (double) rotationalVelocity;
 - (void) setRotationalVelocity:(double) v;
@@ -81,6 +81,8 @@ MA 02110-1301, USA.
 
 - (OOMaterial *) material;
 - (OOMaterial *) atmosphereMaterial;
+
+- (BOOL) isFinishedLoading;
 
 @end
 

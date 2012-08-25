@@ -84,6 +84,7 @@ static OOAsyncWorkManager *sSingleton = nil;
 
 @interface OOOperationQueueAsyncWorkManager: OOAsyncWorkManagerInternal
 {
+@private
 	OONSOperationQueue		_operationQueue;
 }
 
@@ -142,7 +143,7 @@ static void InitAsyncWorkManager(void)
 #endif
 
 
-+ (id) sharedAsyncWorkManager
++ (OOAsyncWorkManager *) sharedAsyncWorkManager
 {
 #if USE_PTHREAD_ONCE
 	static pthread_once_t once = PTHREAD_ONCE_INIT;
@@ -162,7 +163,7 @@ static void InitAsyncWorkManager(void)
 }
 
 
-+ (id)allocWithZone:(NSZone *)inZone
++ (id) allocWithZone:(NSZone *)inZone
 {
 	if (sSingleton == nil)
 	{

@@ -30,8 +30,6 @@ MA 02110-1301, USA.
 
 @interface PlayerEntity (ScriptMethods)
 
-- (NSString *) playerName;
-
 - (unsigned) score;
 - (void) setScore:(unsigned)value;
 
@@ -56,6 +54,11 @@ MA 02110-1301, USA.
 - (unsigned) systemPseudoRandom100;
 - (unsigned) systemPseudoRandom256;
 - (double) systemPseudoRandomFloat;
+
+- (NSDictionary *) passengerContractMarker:(OOSystemID)system;
+- (NSDictionary *) cargoContractMarker:(OOSystemID)system;
+- (NSDictionary *) defaultMarker:(OOSystemID)system;
+- (NSDictionary *) validatedMarker:(NSDictionary *)marker;
 
 @end
 

@@ -36,7 +36,7 @@ MA 02110-1301, USA.
 		const char *JSStringToStrDbg(JSString *)
 		Converts any JS value/object/JSString to a string, using the complete
 		process and potentially calling into SpiderMonkey with a secondory
-		contenxt and invoking JS toString() methods. This might mess up
+		context and invoking JS toString() methods. This might mess up
 		SpiderMonkey internal state in some cases.
 		
 		const char *JSValueToStrSafeDbg(jsval)
@@ -54,7 +54,7 @@ MA 02110-1301, USA.
 		const char *JSValueTypeDbg(jsval)
 		Returns the type of the jsval, or the class name if it's an object.
 	
-	All dynamic strings are autorelease.
+	All dynamic strings are autoreleased.
  
 	 Another useful function is OOJSDumpStack (results are found in the log):
 		
@@ -88,7 +88,7 @@ MA 02110-1301, USA.
 const char *JSValueToStrDbg(jsval val)
 {
 	JSContext *context = OOJSAcquireContext();
-	const char *result = [[NSString stringWithJavaScriptValue:val inContext:context] UTF8String];
+	const char *result = [OOStringFromJSValueEvenIfNull(context, val) UTF8String];
 	OOJSRelinquishContext(context);
 	
 	return result;
@@ -146,7 +146,7 @@ const char *JSValueToStrSafeDbg(jsval val)
 {
 	NSString *formatted = nil;
 	
-	if (JSVAL_IS_INT(val))			formatted = [NSString stringWithFormat:@"%i", (long)JSVAL_TO_INT(val)];
+	if (JSVAL_IS_INT(val))			formatted = [NSString stringWithFormat:@"%i", JSVAL_TO_INT(val)];
 	else if (JSVAL_IS_DOUBLE(val))	formatted = [NSString stringWithFormat:@"%g", JSVAL_TO_DOUBLE(val)];
 	else if (JSVAL_IS_BOOLEAN(val))	formatted = (JSVAL_TO_BOOLEAN(val)) ? @"true" : @"false";
 	else if (JSVAL_IS_STRING(val))
@@ -189,7 +189,7 @@ const char *JSIDToStrSafeDbg(jsid anID)
 {
 	NSString *formatted = nil;
 	
-	if (JSID_IS_INT(anID))			formatted = [NSString stringWithFormat:@"%i", (long)JSID_TO_INT(anID)];
+	if (JSID_IS_INT(anID))			formatted = [NSString stringWithFormat:@"%i", JSID_TO_INT(anID)];
 	else if (JSID_IS_VOID(anID))	return "void";
 	else if (JSID_IS_EMPTY(anID))	return "empty";
 	else if (JSID_IS_ZERO(anID))	return "0";
