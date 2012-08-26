@@ -44,18 +44,18 @@ enum
 	IBOutlet NSTextField		*textField;
 	
 	NSMutableArray				*_history;			// History buffer, newest lines at end
-	unsigned					_historyMaxSize,	// Max allowable history entries
+	NSUInteger					_historyMaxSize,	// Max allowable history entries
 								_historyCurrSize,	// Current count
 								_historyCursor;		// Index from end+1 -- 0 means new line, 1 means last entry in history
 	NSString					*_latest;			// Last entered string when paging through history.
 }
 
-- (NSArray *)history;
-- (void)setHistory:(NSArray *)history;
+- (NSArray *) history;
+- (void) setHistory:(NSArray *)history;
 
-- (void)addToHistory:(NSString *)string;
+- (void) addToHistory:(NSString *)string;
 
-- (unsigned)historySize;
-- (void)setHistorySize:(unsigned)size;
+- (NSUInteger) historySize;
+- (void) setHistorySize:(NSUInteger)size;
 
 @end

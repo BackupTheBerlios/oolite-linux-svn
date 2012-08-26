@@ -59,11 +59,11 @@ SOFTWARE.
 
 - (void) soundDebugMonitorNoteActiveChannelCount:(OOUInteger)usedChannels
 {
-	[_currentField setIntValue:usedChannels];
+	[_currentField setIntegerValue:usedChannels];
 	if (usedChannels > _channelCountHighWaterMark)
 	{
 		_channelCountHighWaterMark = usedChannels;
-		[_maxField setIntValue:usedChannels];
+		[_maxField setIntegerValue:usedChannels];
 	}
 }
 

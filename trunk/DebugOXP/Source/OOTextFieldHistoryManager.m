@@ -36,8 +36,8 @@
 
 - (void)checkInvariant;
 - (void)maintainInvariant;
-- (void)moveHistoryCursorTo:(unsigned)newCursor fieldEditor:(NSTextView *)fieldEditor;
-- (void)moveHistoryCursorBy:(int)offset fieldEditor:(NSTextView *)fieldEditor;
+- (void)moveHistoryCursorTo:(NSUInteger)newCursor fieldEditor:(NSTextView *)fieldEditor;
+- (void)moveHistoryCursorBy:(NSInteger)offset fieldEditor:(NSTextView *)fieldEditor;
 
 @end
 
@@ -45,7 +45,7 @@
 @implementation OOTextFieldHistoryManager
 
 
-- (BOOL)control:(NSControl *)control textView:(NSTextView *)textView doCommandBySelector:(SEL)commandSelector
+- (BOOL) control:(NSControl *)control textView:(NSTextView *)textView doCommandBySelector:(SEL)commandSelector
 {
 	if (control == textField)
 	{
@@ -68,7 +68,7 @@
 }
 
 
-- (id)init
+- (id) init
 {
 	self = [super init];
 	if (self != nil)
@@ -81,7 +81,7 @@
 }
 
 
-- (void)dealloc
+- (void) dealloc
 {
 	[_history release];
 	
@@ -89,13 +89,13 @@
 }
 
 
-- (NSArray *)history
+- (NSArray *) history
 {
 	return [[_history copy] autorelease];
 }
 
 
-- (void)setHistory:(NSArray *)history
+- (void) setHistory:(NSArray *)history
 {
 	if (history == nil)  [_history removeAllObjects];
 	else
@@ -108,7 +108,7 @@
 }
 
 
-- (void)addToHistory:(NSString *)string
+- (void) addToHistory:(NSString *)string
 {
 	[self checkInvariant];
 	
@@ -124,13 +124,13 @@
 }
 
 
-- (unsigned)historySize
+- (NSUInteger) historySize
 {
 	return _historyMaxSize;
 }
 
 
-- (void)setHistorySize:(unsigned)size
+- (void) setHistorySize:(NSUInteger)size
 {
 	_historyMaxSize = size;
 	[self maintainInvariant];
@@ -141,7 +141,7 @@
 
 @implementation OOTextFieldHistoryManager (Private)
 
-- (void)checkInvariant
+- (void) checkInvariant
 {
 	NSAssert(_history != nil &&  // History buffer must exist
 			 _historyCurrSize == [_history count] &&  // Size must be correct
@@ -151,7 +151,7 @@
 }
 
 
-- (void)maintainInvariant
+- (void) maintainInvariant
 {
 	_historyCurrSize = [_history count];
 	
@@ -165,7 +165,7 @@
 }
 
 
-- (void)moveHistoryCursorTo:(unsigned)newCursor fieldEditor:(NSTextView *)fieldEditor
+- (void) moveHistoryCursorTo:(NSUInteger)newCursor fieldEditor:(NSTextView *)fieldEditor
 {
 	NSString					*value = nil;
 	NSTextStorage				*textStorage = nil;
@@ -181,7 +181,7 @@
 	
 	if (newCursor > 0)
 	{
-		unsigned index = _historyCurrSize - newCursor;
+		NSUInteger index = _historyCurrSize - newCursor;
 		value = [_history objectAtIndex:index];
 		if (_historyCursor == 0)  _latest = [[textStorage string] copy];
 	}
@@ -200,10 +200,10 @@
 }
 
 
-- (void)moveHistoryCursorBy:(int)offset fieldEditor:(NSTextView *)fieldEditor
+- (void) moveHistoryCursorBy:(NSInteger)offset fieldEditor:(NSTextView *)fieldEditor
 {
 	// Range check
-	if (((offset < 0) && (_historyCursor < (unsigned)-offset))	// Destination < 0
+	if (((offset < 0) && (_historyCursor < (NSUInteger)-offset))	// Destination < 0
 		|| (_historyCurrSize < (offset + _historyCursor)))	// Destination > _historyCurrSize
 	{
 		NSBeep();

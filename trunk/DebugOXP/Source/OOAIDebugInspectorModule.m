@@ -48,7 +48,7 @@ SOFTWARE.
 	[_stateField setStringValue:[object state] ?: placeholder];
 	if (object != nil)
 	{
-		[_stackDepthField setIntValue:[object stackDepth]];
+		[_stackDepthField setIntegerValue:[object stackDepth]];
 		[_timeToThinkField setStringValue:[NSString stringWithFormat:@"%.1f", [object nextThinkTime] - [UNIVERSE getTime]]];
 		[_behaviourField setStringValue:OOStringFromBehaviour([[object owner] behaviour])];
 		[_frustrationField setDoubleValue:[[object owner] frustration]];

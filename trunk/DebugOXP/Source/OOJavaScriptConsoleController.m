@@ -201,7 +201,7 @@ enum
 	volatile NSRange			fullRange;
 	NSTextStorage				*textStorage = nil;
 	BOOL						doScroll;
-	unsigned					length;
+	NSUInteger					length;
 	
 	mutableStr = [NSMutableAttributedString stringWithString:[string stringByAppendingString:@"\n"]
 														font:_baseFont];
@@ -421,7 +421,7 @@ enum
 - (void)setUpFonts
 {
 	NSString					*fontFace = nil;
-	int							fontSize;
+	NSInteger					fontSize;
 	
 	[_baseFont release];
 	_baseFont = nil;

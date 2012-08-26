@@ -292,7 +292,7 @@ static void SetDisplayLogMessagesInClassThroughJS(NSString *msgClass, BOOL displ
 
 - (IBAction)toggleThisDebugFlagAction:sender
 {
-	uint32_t					tag, bits;
+	NSUInteger					tag, bits;
 	NSString					*command = nil;
 	
 	tag = [sender tag];
@@ -301,12 +301,12 @@ static void SetDisplayLogMessagesInClassThroughJS(NSString *msgClass, BOOL displ
 	if (bits != tag)
 	{
 		// Flags are off or mixed.
-		command = [NSString stringWithFormat:@"console.debugFlags |= 0x%.X", tag];
+		command = [NSString stringWithFormat:@"console.debugFlags |= 0x%lX", tag];
 	}
 	else
 	{
 		// Flags are all on.
-		command = [NSString stringWithFormat:@"console.debugFlags &= ~0x%.X", tag];
+		command = [NSString stringWithFormat:@"console.debugFlags &= ~0x%.lX", tag];
 	}
 	
 	[[OODebugMonitor sharedDebugMonitor] performJSConsoleCommand:command];
@@ -315,7 +315,7 @@ static void SetDisplayLogMessagesInClassThroughJS(NSString *msgClass, BOOL displ
 
 - (IBAction) setShaderModeToTag:sender
 {
-	OOShaderSetting setting = [sender tag];
+	OOShaderSetting setting = (OOShaderSetting)[sender tag];
 	NSString *settingString = [OOStringFromShaderSetting(setting) escapedForJavaScriptLiteral];
 	NSString *command = [NSString stringWithFormat:@"console.shaderMode = \"%@\"", settingString];
 	
@@ -409,7 +409,7 @@ static void SetDisplayLogMessagesInClassThroughJS(NSString *msgClass, BOOL displ
 {
 	SEL							action = NULL;
 	NSString					*msgClass = nil;
-	uint32_t					tag, bits;
+	NSUInteger					tag, bits;
 	int							state;
 	
 	action = [menuItem action];
@@ -448,7 +448,7 @@ static void SetDisplayLogMessagesInClassThroughJS(NSString *msgClass, BOOL displ
 	}
 	if (action == @selector(setShaderModeToTag:))
 	{
-		OOShaderSetting itemLevel = [menuItem tag];
+		OOShaderSetting itemLevel = (OOShaderSetting)[menuItem tag];
 		
 		[menuItem setState:[UNIVERSE shaderEffectsLevel] == itemLevel];
 		return itemLevel <= [[OOOpenGLExtensionManager sharedManager] maximumShaderSetting];
@@ -461,7 +461,7 @@ static void SetDisplayLogMessagesInClassThroughJS(NSString *msgClass, BOOL displ
 - (void)insertDebugMenu
 {
 	NSMenuItem					*item = nil;
-	int							index;
+	NSInteger					index;
 	
 	[menu setTitle:@"Debug"];
 	item = [[NSMenuItem alloc] initWithTitle:@"Debug" action:NULL keyEquivalent:@""];
@@ -539,7 +539,7 @@ static void SetDisplayLogMessagesInClassThroughJS(NSString *msgClass, BOOL displ
 }
 
 
-- (OOUInteger)retainCount
+- (NSUInteger)retainCount
 {
 	return UINT_MAX;
 }

@@ -153,16 +153,15 @@ static NSMutableDictionary		*sActiveInspectors = nil;
 - (void) placeModules
 {
 	// Lay out modules vertically in panel.
-	unsigned			i, count = [_modules count];
 	float				totalHeight = 4; // Margin at bottom
 	NSRect				frame;
 	NSView				*contentView = nil, *moduleView = nil;
 	NSSize				size;
 	
 	// Sum heights of modules.
-	for (i = 0; i != count; ++i)
+	for (OODebugInspectorModule *module in _modules)
 	{
-		totalHeight += [[[_modules objectAtIndex:i] rootView] frame].size.height;
+		totalHeight += [[module rootView] frame].size.height;
 	}
 	
 	// Resize panel appropriately.
@@ -180,9 +179,9 @@ static NSMutableDictionary		*sActiveInspectors = nil;
 	
 	// Position each module.
 	contentView = [_panel contentView];
-	for (i = 0; i != count; ++i)
+	for (OODebugInspectorModule *module in _modules)
 	{
-		moduleView = [[_modules objectAtIndex:i] rootView];
+		moduleView = [module rootView];
 		frame = [moduleView frame];
 		totalHeight -= frame.size.height;
 		frame.origin.y = totalHeight;

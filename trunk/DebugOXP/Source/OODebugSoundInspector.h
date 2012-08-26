@@ -39,8 +39,8 @@ SOFTWARE.
 	IBOutlet NSTextField			*_maxField;
 	IBOutlet NSLevelIndicator		*_loadBar;
 	
-	OOUInteger						_channelCountHighWaterMark;
-	OOUInteger						_loadHighWaterMark;
+	NSUInteger						_channelCountHighWaterMark;
+	NSUInteger						_loadHighWaterMark;
 }
 
 - (IBAction) show:(id)sender;
