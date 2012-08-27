@@ -432,8 +432,8 @@ enum
 	fontFace = [_debugger configurationValueForKey:@"font-face"
 											class:[NSString class]
 									 defaultValue:@"Courier"];
-	fontSize = [_debugger configurationIntValueForKey:@"font-size"
-										defaultValue:12];
+	fontSize = (NSInteger)[_debugger configurationIntValueForKey:@"font-size"
+													defaultValue:12];
 	
 	_baseFont = [NSFont fontWithName:fontFace size:fontSize];
 	if (_baseFont == nil)  _baseFont = [NSFont userFixedPitchFontOfSize:0];
