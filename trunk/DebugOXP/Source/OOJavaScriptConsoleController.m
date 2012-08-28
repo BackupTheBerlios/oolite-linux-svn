@@ -423,10 +423,8 @@ enum
 	NSString					*fontFace = nil;
 	NSInteger					fontSize;
 	
-	[_baseFont release];
-	_baseFont = nil;
-	[_boldFont release];
-	_boldFont = nil;
+	DESTROY(_baseFont);
+	DESTROY(_boldFont);
 	
 	// Set font.
 	fontFace = [_debugger configurationValueForKey:@"font-face"
