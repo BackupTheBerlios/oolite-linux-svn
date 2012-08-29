@@ -147,7 +147,7 @@
 		1A5730A00D84D0C3003D4A26 /* English */ = {isa = PBXFileReference; explicitFileType = text.plist; fileEncoding = 10; name = English; path = English.lproj/Localizable.strings; sourceTree = "<group>"; };
 		1A846BAB0D79F9680081280D /* oolite-version.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = "oolite-version.xcconfig"; path = "../src/Cocoa/oolite-version.xcconfig"; sourceTree = SOURCE_ROOT; };
 		1A909C860F3C6BBB003AE160 /* OOShipGroupDebugInspectorModule.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OOShipGroupDebugInspectorModule.h; sourceTree = "<group>"; };
-		1A909C870F3C6BBB003AE160 /* OOShipGroupDebugInspectorModule.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = OOShipGroupDebugInspectorModule.m; sourceTree = "<group>"; };
+		1A909C870F3C6BBB003AE160 /* OOShipGroupDebugInspectorModule.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; lineEnding = 0; path = OOShipGroupDebugInspectorModule.m; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objc; };
 		1A909C930F3C6DCA003AE160 /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/OOShipGroupDebugInspectorModule.xib; sourceTree = "<group>"; };
 		1A98BC4410C1E95E000F1F56 /* RBSplitView-shim.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "RBSplitView-shim.m"; sourceTree = "<group>"; };
 		1ABFEE3C10507C5C005AA752 /* Oolite.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = Oolite.xcodeproj; path = ../Oolite.xcodeproj; sourceTree = SOURCE_ROOT; };

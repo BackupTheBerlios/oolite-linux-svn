@@ -24,7 +24,7 @@ typedef enum {
 // Most getter methods simply return the corresponding instance variable, so with some care, subclasses
 // could reference them directly.
 	NSString* identifier;			// An identifier string for the subview, default is @"".
-	OOInteger tag;					// A tag integer for the subview, default is 0.
+	NSInteger tag;					// A tag integer for the subview, default is 0.
 	float minDimension;				// The minimum dimension. Must be 1.0 or any larger integer.
 	float maxDimension;				// The maximum dimension. Must be at least equal to the minDimension.
 									// Set to a large number if there's no maximum.
@@ -35,7 +35,7 @@ typedef enum {
 	NSRect previous;				// Holds the frame rect for the last delegate notification.
 	NSSize savedSize;				// This holds the size the subview had before it was resized beyond
 									// its minimum or maximum limits. Valid if notInLimits is YES.
-	OOUInteger actDivider;			// This is set temporarily while an alternate drag view is being dragged.
+	NSUInteger actDivider;			// This is set temporarily while an alternate drag view is being dragged.
 	BOOL canDragWindow;				// This is set temporarily during a mouseDown on a non-opaque subview.
 	BOOL canCollapse;				// YES if the subview can be collapsed.
 	BOOL notInLimits;				// YES if the subview's dimensions are outside the set limits.
@@ -73,8 +73,8 @@ typedef enum {
 - (unsigned)numberOfSubviews;
 
 // Sets and gets the tag.
-- (void)setTag:(OOInteger)theTag;
-- (OOInteger)tag;
+- (void)setTag:(NSInteger)theTag;
+- (NSInteger)tag;
 
 // Sets and gets the identifier string. Will never be nil.
 - (void)setIdentifier:(NSString*)aString;
