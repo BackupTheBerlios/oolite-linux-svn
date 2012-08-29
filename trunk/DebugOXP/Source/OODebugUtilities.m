@@ -34,7 +34,7 @@ SOFTWARE.
 
 - (NSColor *)asNSColor
 {
-	OOCGFloat r, g, b, a;
+	float r, g, b, a;
 	[self getRed:&r green:&g blue:&b alpha:&a];
 	return [NSColor colorWithDeviceRed:r green:g blue:b alpha:a];
 }
@@ -58,9 +58,9 @@ SOFTWARE.
 
 - (OOColor *)asOOColor
 {
-	OOCGFloat r, g, b, a;
+	CGFloat r, g, b, a;
 	[[self colorUsingColorSpaceName:NSCalibratedRGBColorSpace] getRed:&r green:&g blue:&b alpha:&a];
-	return [OOColor colorWithCalibratedRed:r green:g blue:b alpha:a];
+	return [OOColor colorWithRed:r green:g blue:b alpha:a];
 }
 	
 @end
