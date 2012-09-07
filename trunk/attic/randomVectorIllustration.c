@@ -1,4 +1,4 @@
-// Code to generate http://wiki.alioth.net/index.php/Image:Randomvectordistribution.png
+// Code to generate http://wiki.alioth.net/index.php/File:Randomvectordistribution.png
 
 #import <math.h>
 #import <stdio.h>
