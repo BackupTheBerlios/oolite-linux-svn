@@ -1,5 +1,6 @@
 #import <Foundation/Foundation.h>
 #import "OOProbabilitySet.h"
+#import "legacy_random.h"
 #undef NSLog
 #undef NSLogv
 
@@ -112,7 +113,7 @@ static void PresentHistogram(NSCountedSet *histogram)
 	
 	for (objEnum = [histogram objectEnumerator]; (obj = [objEnum nextObject]); )
 	{
-		NSLog(@"%@: %u", obj, [histogram countForObject:obj]);
+		NSLog(@"%@: %lu", obj, [histogram countForObject:obj]);
 	}
 }
 
