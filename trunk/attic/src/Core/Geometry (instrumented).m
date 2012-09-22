@@ -24,46 +24,8 @@ MA 02110-1301, USA.
 
 
 /*
-	PERFORMANCE NOTES
-	
-	This class has historically been noted for its significant presence in
-	startup profiles, and is believed to be a major source of in-game stutter,
-	so its performance characteristics are important.
-	
-	
-	The following observations were made in r5352, starting up with no OXPs
-	(except Debug.oxp) and no cache, and running through the complete set of
-	demo ships.
-	
-	* In total, 379,344 geometries were allocated.
-	* No more than 53 were allocated at a time.
-	* 37.3% of them (141,585) never had a triangle added.
-	* 51.2% had 4 or fewer triangles. 72.3% had 8 or fewer triangles. 93.3%
-      had 16 or fewer triangles.
-	* Triangle storage was reallocated 98,809 times.
-	* More time was spent in ObjC memory management than C memory management.
-	* In total, -addTriangle: was called 2,171,785 times.
-	* Degenerate triangles come from input geometry, but don't seem to be
-	  generated in inner nodes.
-	
-	Conclusions:
-	* addTriangle: should be a static C function. The degenerate check is only
-	  needed for input unless evidence to the contrary emerges.
-	* Triangle storage should be lazily allocated.
-	* Wasted space in triangle storage is unimportant with only 53 Geometries
-	  live at a time, so the splitting code should use a pessimistic heuristic
-	  for selecting the capacity of sub-geometries.
-	* A pool allocator for Geometries should be helpful.
-	* It may be worth putting space for some number of triangles in the
-	  Geometry itself (conceptually similar to the standard short string
-	  optimization). For example, if the isConvex flag used a bit in
-	  n_triangles, we could store 4 triangles in a 64-byte object (on a 64-
-	  bit system) before transitioning to dynamic storage. (This would avoid
-	  allocation for an additional 14% of objects over lazy allocation, so the
-	  win isn't that big. Raising the object size to 128 bytes gives us 9
-	  triangles.)
-	
-	All but the last of these is implemented in r5353.
+	This version of Geometry.m contains the hacked-in instrumentation used to
+	optimize r5353.
 */
 
 
@@ -74,8 +36,28 @@ MA 02110-1301, USA.
 #import "OOLogging.h"
 
 
+#define PROFILE_GEOMETRY		(!defined(NDEBUG))
 #define USE_ALLOC_POOL			OOLITE_MAC_OS_X_10_6
 
+
+#if PROFILE_GEOMETRY
+
+#import "OOCollectionExtractors.h"
+static NSUInteger sGrowCount;
+static NSUInteger sLiveCount;
+static NSUInteger sLiveHighWaterMark;
+static NSUInteger sGeometryCount;
+static NSUInteger sTotalUsedSlots;
+static NSUInteger sTotalAllocatedSlots;
+static NSMutableDictionary *sHistogram;
+
+static NSUInteger sAddCount;
+static NSUInteger sLazyAllocCount;
+
+static size_t sMemoryUsed;
+static size_t sMemoryHighWaterMark;
+
+#endif
 
 #if USE_ALLOC_POOL
 
@@ -185,7 +167,7 @@ enum
 #endif
 
 
-- (id) initWithCapacity:(NSUInteger)amount
+- (id) initWithCapacity:(NSUInteger)amount asRoot:(BOOL)root
 {
 	if (amount < 1)
 	{
@@ -202,26 +184,78 @@ enum
 		max_triangles = amount;
 		n_triangles = 0;
 		isConvex = NO;
+		isRoot = YES;
+		
+#if PROFILE_GEOMETRY
+		sLiveCount++;
+		sLiveHighWaterMark = MAX(sLiveCount, sLiveHighWaterMark);
+#endif
 	}
 	
 	return self;
 }
 
 
+- (id) initWithCapacity:(NSUInteger)amount
+{
+	return [self initWithCapacity:amount asRoot:YES];
+}
+
+
 - (void) dealloc
 {
+#if PROFILE_GEOMETRY
+	if (sHistogram == nil)
+	{
+		sHistogram = [[NSMutableDictionary alloc] init];
+	}
+	NSNumber *valueObj = [NSNumber numberWithInteger:n_triangles];
+	NSUInteger count = [sHistogram oo_unsignedIntegerForKey:valueObj];
+	[sHistogram oo_setUnsignedInteger:count + 1 forKey:valueObj];
+	
+	sGeometryCount++;
+	sLiveCount--;
+	
+	sTotalUsedSlots += n_triangles;
+	sTotalAllocatedSlots += max_triangles;
+	
+	if (triangles != NULL)
+	{
+		sMemoryUsed -= max_triangles * sizeof(Triangle);
+	}
+	
+	if (sLiveCount == 0)
+	{
+		NSMutableString *histogramString = [NSMutableString string];
+		NSUInteger cumuCount = 0;
+		NSArray *sorted = [[sHistogram allKeys] sortedArrayUsingSelector:@selector(compare:)];
+		foreach (valueObj, sorted)
+		{
+			count = [sHistogram oo_integerForKey:valueObj];
+			cumuCount += count;
+			[histogramString appendFormat:@"\n  %lu: %lu    -- %.3g %%, %.3g %% cumulative", [valueObj integerValue], count, (double)count / sGeometryCount * 100.0, (double)cumuCount / sGeometryCount * 100.0];
+		}
+		OOLog(@"geometry.profile", @"ALL GEOMETRIES DEALLOCATED. Histogram:%@", histogramString);
+		
+		OOLog(@"geometry.profile", @"High water mark: %lu. Max memory used: %zu.", sLiveHighWaterMark, sMemoryHighWaterMark);
+		
+		OOLog(@"geometry.profile", @"%lu growths for %lu geometries, ratio: %g; average fill rate: %g", sGrowCount, sGeometryCount, (double)sGrowCount/sGeometryCount, (double)sTotalUsedSlots/sTotalAllocatedSlots);
+		
+		OOLog(@"geometry.profile", @"Hit rate for lazy allocation branch: %g %%", (double)sLazyAllocCount/sAddCount * 100.0);
+		
+		OOLog(@"geometry.profile", @"Total addTriangle: calls: %lu", sAddCount);
+	}
+#endif
+	
 	free(triangles);	// free up the allocated space
 	
 #if USE_ALLOC_POOL
-	// Do the runtimey bits of deallocing...
 	FreeBlock *block = (FreeBlock *)objc_destructInstance(self);
 	self = nil;
 	
-	// ..and return memory to pool.
 	block->next = sNextFreeBlock;
 	sNextFreeBlock = block;
 	
-	// Destroy entire pool if there are no live Geometries.
 	if (--sLiveInstancesCount == 0)
 	{
 		DESTROY(sAllocationChunks);
@@ -259,23 +293,33 @@ static GCC_ATTR((noinline)) void GrowTriangles(Geometry *self)
 {
 	if (self->triangles == NULL)
 	{
+#if PROFILE_GEOMETRY
+		sLazyAllocCount++;
+		sMemoryUsed += self->max_triangles * sizeof(Triangle);
+		sMemoryHighWaterMark = MAX(sMemoryUsed, sMemoryHighWaterMark);
+#endif
 		/*
-			Lazily allocate triangle storage, since a significant portion of
-			Geometries never have any triangles added to them. Note that
-			max_triangles is set to the specified capacity in init even though
-			the actual capacity is zero at that point.
-			
-			Profiling under the same conditions as the performance note at the
-			top of the file found that this condition had a hit rate of 11%,
-			which counterindicates the use of a branch hint.
-		*/
+		 Lazily allocate triangle storage, since a significant portion of
+		 Geometries never have any triangles added to them. Note that
+		 max_triangles is set to the specified capacity in init even though
+		 the actual capacity is zero at that point.
+		 
+		 Profiling under the same conditions as the performance note at the
+		 top of the file found that this condition had a hit rate of 11%,
+		 which counterindicates the use of a branch hint.
+		 */
 		self->triangles = malloc(self->max_triangles * sizeof(Triangle));
 	}
 	
-	// check for no-more-room.
+	// check for no-more-room
 	if (EXPECT_NOT(self->n_triangles == self->max_triangles))
 	{
-		// create more space by doubling the capacity of this geometry.
+#if PROFILE_GEOMETRY
+		sGrowCount++;
+		sMemoryUsed += (1 + self->max_triangles) * sizeof(Triangle);
+#endif
+		
+		// create more space by doubling the capacity of this geometry...
 		self->max_triangles = 1 + self->max_triangles * 2;
 		self->triangles = realloc(self->triangles, self->max_triangles * sizeof(Triangle));
 		
@@ -292,6 +336,10 @@ static GCC_ATTR((noinline)) void GrowTriangles(Geometry *self)
 
 OOINLINE void AddTriangle(Geometry *self, Triangle tri)
 {
+#if PROFILE_GEOMETRY
+	sAddCount++;
+#endif
+	
 	if (self->triangles == NULL || self->n_triangles == self->max_triangles)
 	{
 		GrowTriangles(self);
@@ -321,12 +369,11 @@ OOINLINE void AddTriangle(Geometry *self, Triangle tri)
 
 - (BOOL) testIsConvex
 {
-	/*	Enumerate over triangles
-		calculate normal for each one,
-		then enumerate over vertices relative to a vertex on the triangle
-		and check if they are on the forwardside or coplanar with the triangle.
-		If a vertex is on the backside of any triangle then return NO.
-	*/
+	// enumerate over triangles
+	// calculate normal for each one
+	// then enumerate over vertices relative to a vertex on the triangle
+	// and check if they are on the forwardside or coplanar with the triangle
+	// if a vertex is on the backside of any triangle then return NO;
 	NSInteger	i, j;
 	for (i = 0; i < n_triangles; i++)
 	{
@@ -354,12 +401,11 @@ OOINLINE void AddTriangle(Geometry *self, Triangle tri)
 
 - (BOOL) testCornersWithinGeometry:(GLfloat)corner
 {
-	/*	enumerate over triangles
-		calculate normal for each one,
-		then enumerate over corners relative to a vertex on the triangle
-		and check if they are on the forwardside or coplanar with the triangle.
-		If a corner is on the backside of any triangle then return NO.
-	*/
+	// enumerate over triangles
+	// calculate normal for each one
+	// then enumerate over corners relative to a vertex on the triangle
+	// and check if they are on the forwardside or coplanar with the triangle
+	// if a corner is on the backside of any triangle then return NO;
 	NSInteger	i, x, y, z;
 	for (i = 0; i < n_triangles; i++)
 	{
@@ -415,26 +461,26 @@ static float volumecount;
 
 - (id) octreeWithinRadius:(GLfloat)octreeRadius toDepth:(int)depth
 {
+	//
 	GLfloat offset = 0.5f * octreeRadius;
-	
+	//
 	if (![self testHasGeometry])
 	{
 		leafcount++;	// nil or zero or 0
 		return [NSNumber numberWithBool:NO];	// empty octree
 	}
-	
 	// there is geometry!
+	//
 	if ((octreeRadius <= OCTREE_MIN_RADIUS)||(depth <= 0))	// maximum resolution
 	{
 		leafcount++;	// partially full or -1
 		volumecount += octreeRadius * octreeRadius * octreeRadius * 0.5f;
 		return [NSNumber numberWithBool:YES];	// at least partially full octree
 	}
-	
+	//
 	if (!isConvex)
-	{
 		[self testIsConvex]; // check!
-	}
+	//
 	if (isConvex)	// we're convex!
 	{
 		if ([self testCornersWithinGeometry: octreeRadius])	// all eight corners inside or on!
@@ -483,24 +529,24 @@ static float volumecount;
 	NSUInteger subCapacity = n_triangles * kFactor;
 	if (subCapacity < kMinimum)  subCapacity = kMinimum;
 	
-	Geometry* g_000 = [(Geometry *)[Geometry alloc] initWithCapacity:subCapacity];
-	Geometry* g_001 = [(Geometry *)[Geometry alloc] initWithCapacity:subCapacity];
-	Geometry* g_010 = [(Geometry *)[Geometry alloc] initWithCapacity:subCapacity];
-	Geometry* g_011 = [(Geometry *)[Geometry alloc] initWithCapacity:subCapacity];
-	Geometry* g_100 = [(Geometry *)[Geometry alloc] initWithCapacity:subCapacity];
-	Geometry* g_101 = [(Geometry *)[Geometry alloc] initWithCapacity:subCapacity];
-	Geometry* g_110 = [(Geometry *)[Geometry alloc] initWithCapacity:subCapacity];
-	Geometry* g_111 = [(Geometry *)[Geometry alloc] initWithCapacity:subCapacity];
-	
-	Geometry* g_xx1 =	[(Geometry *)[Geometry alloc] initWithCapacity:subCapacity];
-	Geometry* g_xx0 =	[(Geometry *)[Geometry alloc] initWithCapacity:subCapacity];
-	
+	Geometry* g_000 = [(Geometry *)[Geometry alloc] initWithCapacity:subCapacity asRoot:NO];
+	Geometry* g_001 = [(Geometry *)[Geometry alloc] initWithCapacity:subCapacity asRoot:NO];
+	Geometry* g_010 = [(Geometry *)[Geometry alloc] initWithCapacity:subCapacity asRoot:NO];
+	Geometry* g_011 = [(Geometry *)[Geometry alloc] initWithCapacity:subCapacity asRoot:NO];
+	Geometry* g_100 = [(Geometry *)[Geometry alloc] initWithCapacity:subCapacity asRoot:NO];
+	Geometry* g_101 = [(Geometry *)[Geometry alloc] initWithCapacity:subCapacity asRoot:NO];
+	Geometry* g_110 = [(Geometry *)[Geometry alloc] initWithCapacity:subCapacity asRoot:NO];
+	Geometry* g_111 = [(Geometry *)[Geometry alloc] initWithCapacity:subCapacity asRoot:NO];
+	//
+	Geometry* g_xx1 =	[(Geometry *)[Geometry alloc] initWithCapacity:subCapacity asRoot:NO];
+	Geometry* g_xx0 =	[(Geometry *)[Geometry alloc] initWithCapacity:subCapacity asRoot:NO];
+	//
 	[self z_axisSplitBetween:g_xx1 :g_xx0 : offset];
 	if ([g_xx0 testHasGeometry])
 	{
-		Geometry* g_x00 =	[(Geometry *)[Geometry alloc] initWithCapacity:subCapacity];
-		Geometry* g_x10 =	[(Geometry *)[Geometry alloc] initWithCapacity:subCapacity];
-		
+		Geometry* g_x00 =	[(Geometry *)[Geometry alloc] initWithCapacity:subCapacity asRoot:NO];
+		Geometry* g_x10 =	[(Geometry *)[Geometry alloc] initWithCapacity:subCapacity asRoot:NO];
+		//
 		[g_xx0 y_axisSplitBetween: g_x10 : g_x00 : offset];
 		if ([g_x00 testHasGeometry])
 		{
@@ -519,9 +565,9 @@ static float volumecount;
 	}
 	if ([g_xx1 testHasGeometry])
 	{
-		Geometry* g_x01 =	[(Geometry *)[Geometry alloc] initWithCapacity:subCapacity];
-		Geometry* g_x11 =	[(Geometry *)[Geometry alloc] initWithCapacity:subCapacity];
-		
+		Geometry* g_x01 =	[(Geometry *)[Geometry alloc] initWithCapacity:subCapacity asRoot:NO];
+		Geometry* g_x11 =	[(Geometry *)[Geometry alloc] initWithCapacity:subCapacity asRoot:NO];
+		//
 		[g_xx1 y_axisSplitBetween: g_x11 : g_x01 :offset];
 		if ([g_x01 testHasGeometry])
 		{
@@ -541,11 +587,6 @@ static float volumecount;
 	[g_xx0 release];
 	[g_xx1 release];
 	
-	/*
-		Setting up result array has significant cost. Could be optimized with
-		a custom array class that short-circuits the retain/release dance.
-		-- Ahruman 2012-09-22
-	*/
 	leafcount++;	// pointer to array
 	NSObject* result = [NSArray arrayWithObjects:
 		[g_000 octreeWithinRadius: offset toDepth:depth - 1],
@@ -572,11 +613,6 @@ static float volumecount;
 
 - (void) translate:(Vector)offset
 {
-	/*
-		translate: has non-negligable profile presence. Separate translateX:,
-		translateY: and translateZ: may be beneficial.
-		-- Ahruman 2012-09-22
-	*/
 	NSInteger	i;
 	for (i = 0; i < n_triangles; i++)
 	{
@@ -636,7 +672,7 @@ static float volumecount;
 			Vector v12 = make_vector(0.0f, i12 * (v2.y - v1.y) + v1.y, i12 * (v2.z - v1.z) + v1.z);
 			Vector v20 = make_vector(0.0f, i20 * (v0.y - v2.y) + v2.y, i20 * (v0.z - v2.z) + v2.z);
 		
-			// cases where a vertex is on the split.
+			// cases where a vertex is on the split..
 			if (v0.x == 0.0)
 			{
 				if (v1.x > 0)
@@ -767,7 +803,7 @@ static float volumecount;
 			Vector v12 = make_vector(i12 * (v2.x - v1.x) + v1.x, 0.0f, i12 * (v2.z - v1.z) + v1.z);
 			Vector v20 = make_vector(i20 * (v0.x - v2.x) + v2.x, 0.0f, i20 * (v0.z - v2.z) + v2.z);
 			
-			// cases where a vertex is on the split.
+			// cases where a vertex is on the split..
 			if (v0.y == 0.0)
 			{
 				if (v1.y > 0)
@@ -897,7 +933,7 @@ static float volumecount;
 			Vector v12 = make_vector(i12 * (v2.x - v1.x) + v1.x, i12 * (v2.y - v1.y) + v1.y, 0.0f);
 			Vector v20 = make_vector(i20 * (v0.x - v2.x) + v2.x, i20 * (v0.y - v2.y) + v2.y, 0.0f);
 		
-			// cases where a vertex is on the split.
+			// cases where a vertex is on the split..
 			if (v0.z == 0.0)
 			{
 				if (v1.z > 0)
