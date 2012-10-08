@@ -56,10 +56,10 @@ this.startUp = function ()
 	
 	testRig.$registerTest("expandDescription nonexistent", function ()
 	{
-		var key = "oolite-test-expandDescription-descriptions-plist-nonexistent";
+		var key = "oolite-test-expandDescription-descriptions-plist-nonexistent (JavaScript warning expected)";
 		var expanded = expandDescription("[" + key + "]");
 		
-		require.value("expanded", expanded, key);
+		require.value("expanded", expanded, "[" + key + "]");
 	});
 	
 	testRig.$registerTest("expandDescription parameterized substitution", function ()
