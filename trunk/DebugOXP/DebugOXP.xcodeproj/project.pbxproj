@@ -535,7 +535,7 @@
 		1DEB913B08733D840010E9CD /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				BUNDLE_LOADER = ../build/$CONFIGURATION/Oolite.app/Contents/MacOS/Oolite;
+				BUNDLE_LOADER = $CONFIGURATION_BUILD_DIR/Oolite.app/Contents/MacOS/Oolite;
 				COMBINE_HIDPI_IMAGES = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
@@ -566,7 +566,7 @@
 		1DEB913C08733D840010E9CD /* TestRelease */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				BUNDLE_LOADER = ../build/TestRelease/Oolite.app/Contents/MacOS/Oolite;
+				BUNDLE_LOADER = $CONFIGURATION_BUILD_DIR/Oolite.app/Contents/MacOS/Oolite;
 				COMBINE_HIDPI_IMAGES = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
