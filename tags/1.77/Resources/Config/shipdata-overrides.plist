@@ -1,9 +1,0 @@
-/*	Fixes for known problems in third-party ship data.
-*/
-
-{
-	griff_spacebar_subent_template =
-	{
-		is_template = yes;
-	};
-}
