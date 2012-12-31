@@ -6,7 +6,7 @@ Test suite for Oolite's material model and default shader.
 
 
 Oolite
-Copyright © 2004-2010 Giles C Williams and contributors
+Copyright © 2004-2013 Giles C Williams and contributors
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -29,7 +29,7 @@ MA 02110-1301, USA.
 this.name			= "oolite-material-test-suite";
 this.version		= "1.2";
 this.author			= "Jens Ayton";
-this.copyright		= "© 2010-2012 the Oolite team.";
+this.copyright		= "© 2010-2013 the Oolite team.";
 
 
 this.startUp = function()

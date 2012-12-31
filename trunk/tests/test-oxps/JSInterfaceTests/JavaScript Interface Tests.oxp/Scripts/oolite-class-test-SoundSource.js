@@ -4,7 +4,7 @@ oolite-class-test-SoundSource.js
  
 
 Oolite
-Copyright © 2004-2012 Giles C Williams and contributors
+Copyright © 2004-2013 Giles C Williams and contributors
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -26,7 +26,7 @@ MA 02110-1301, USA.
 
 this.name			= "oolite-class-test-SoundSource";
 this.author			= "Jens Ayton";
-this.copyright		= "© 2011-2012 the Oolite team.";
+this.copyright		= "© 2011-2013 the Oolite team.";
 this.description	= "Test cases for SoundSource and Sound.";
 this.version		= "1.77";
 

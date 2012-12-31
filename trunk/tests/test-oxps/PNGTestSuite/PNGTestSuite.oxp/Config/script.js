@@ -6,7 +6,7 @@ Test suite for PNG loading.
 
 
 Oolite
-Copyright © 2004-2012 Giles C Williams and contributors
+Copyright © 2004-2013 Giles C Williams and contributors
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -29,7 +29,7 @@ MA 02110-1301, USA.
 this.name			= "oolite-png-test-suite";
 this.version		= "1.0";
 this.author			= "Jens Ayton";
-this.copyright		= "© 2010-2012 the Oolite team. Test images © Willem van Schaik.";
+this.copyright		= "© 2010-2013 the Oolite team. Test images © Willem van Schaik.";
 
 
 this.startUp = function()
