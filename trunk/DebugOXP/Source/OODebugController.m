@@ -482,7 +482,7 @@ static void SetDisplayLogMessagesInClassThroughJS(NSString *msgClass, BOOL displ
 - (void)setUpLogMessageClassMenu
 {
 	NSArray						*definitions = nil;
-	unsigned					i, count, inserted = 0;
+	NSUInteger					i, count, inserted = 0;
 	NSString					*title = nil, *key = nil;
 	NSMenuItem					*item = nil;
 	
